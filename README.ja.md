@@ -71,8 +71,48 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 }
 ```
 
-フォールバック出力先をカスタマイズするには、`env` に `MCP_FALLBACK_OUTPUT` を追加してください。
+**重要:** 上記の `"args"` に指定したパスは、クローンした MCP サーバーのフォルダにある `dist/index.js`（またはビルドした `index.js`）の**絶対パス**に必ず置き換えてください。指定を変更しないとサーバーは起動しません。
 
+フォールバック出力先をカスタマイズするには、`env` に `MCP_FALLBACK_OUTPUT` を追加してください。
+## Antigravity（`mcp_config.json`）
+
+Antigravity はグローバルな `mcp_config.json` を使用して MCP サーバーを登録します。例:
+
+```json
+{
+  "mcpServers": {
+    "mcp-alphabanana": {
+      "command": "node",
+      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+注: このリポジトリでは `mcp_config.json` を Antigravity 用として使用し、サーバーが起動して画像生成ができることを確認しました。
+
+## Claude Desktop
+
+Claude Desktop を使用する場合は、`claude_desktop_config.json` にエントリを追加します。例:
+
+```json
+{
+  "mcpServers": {
+    "mcp-alphabanana": {
+      "command": "node",
+      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+動作確認: 上記を Claude Desktop に追加して起動すると、MCP サーバーが起動し画像生成が動作しました。
 ### 環境変数
 
 | 変数 | 必須 | 説明 |

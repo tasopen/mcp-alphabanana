@@ -73,6 +73,46 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
 
 **Optional:** Set a custom fallback directory for write failures by adding `MCP_FALLBACK_OUTPUT` to the `env` object.
 
+## Antigravity (mcp_config.json)
+
+Antigravity uses a global `mcp_config.json` to register MCP servers. Example `mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-alphabanana": {
+      "command": "node",
+      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+Note: In this repository we used an `mcp_config.json` with the `mcp-alphabanana` entry (Antigravity) and confirmed the server started and generated images successfully.
+
+## Claude Desktop
+
+If you run MCP servers via Claude Desktop, add an entry in `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "mcp-alphabanana": {
+      "command": "node",
+      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "env": {
+        "GEMINI_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+Tested: Adding the above entry in Claude Desktop and starting the server launched the MCP server and image generation worked.
+
 ### Environment Variables
 
 | Variable | Required | Description |

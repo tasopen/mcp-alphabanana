@@ -1,0 +1,50 @@
+{
+  "name": "mcp-alphabanana",
+  "version": "1.0.0",
+  "description": "MCP server for image generation using Google Gemini AI",
+  "main": "dist/index.js",
+  "type": "module",
+  "files": [
+    "src/",
+    "dist/",
+    "tsconfig.json",
+    "README.md",
+    "README.ja.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "npx fastmcp dev src/index.ts",
+    "inspect": "npx fastmcp inspect src/index.ts",
+    "start": "node dist/index.js",
+    "test": "vitest run test/sanity.test.ts",
+    "test:sanity": "vitest run test/sanity.test.ts",
+    "test:full": "vitest run",
+    "test:transparency": "vitest run test/transparency.test.ts",
+    "test:transparency:flash": "cross-env TEST_MODEL=flash vitest run test/transparency.test.ts",
+    "test:transparency:pro": "cross-env TEST_MODEL=pro vitest run test/transparency.test.ts"
+  },
+  "keywords": [
+    "mcp",
+    "gemini",
+    "image-generation",
+    "fastmcp"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@google/genai": "^1.0.0",
+    "fastmcp": "^3.31.0",
+    "sharp": "^0.33.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.3.1",
+    "@types/node": "^22.0.0",
+    "cross-env": "^10.1.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.5"
+  }
+}

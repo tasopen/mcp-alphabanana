@@ -167,6 +167,7 @@ npm run build
 | `transparent` | boolean | `false` | 透過背景をリクエスト（PNGのみ） |
 | `transparentColor` | string | `null` | 透明にする色（例: `#FF00FF`） |
 | `colorTolerance` | number | `30` | 透過色マッチングの許容範囲（0-255） |
+| `fringeMode` | enum | `auto` | フリンジ処理: `auto`、`crisp`、`hd`（autoは128px以下で`crisp`、それ以外は`hd`） |
 | `resizeMode` | enum | `crop` | リサイズモード: `crop`、`stretch`、`letterbox`、または`contain` |
 | `referenceImages` | array | `[]` | スタイルガイダンス用の参照画像（ファイルパス） |
 | `debug` | boolean | `false` | デバッグモード: 中間画像を出力 |
@@ -183,6 +184,21 @@ npm run build
   "outputWidth": 64,
   "outputHeight": 64,
   "transparent": true
+}
+```
+
+#### 透過 + フリンジ制御
+
+```json
+{
+  "prompt": "アニメ調 自転車に乗った少女",
+  "modelTier": "flash",
+  "outputFileName": "bicycle_girl",
+  "outputWidth": 1024,
+  "outputHeight": 576,
+  "transparent": true,
+  "colorTolerance": 30,
+  "fringeMode": "crisp"
 }
 ```
 
@@ -230,58 +246,39 @@ npm run build
 
 ## 透過処理
 
-サーバーは適応的な彩度/明度フィルターを備えたHSVカラースペースマッチングを使用して背景色を透明にします。
+サーバーはヒストグラム分析と色相近接により背景色を推定し、RGB距離でキー抜きを行います。
 
-### モデル推奨事項
+### モデルメモ
 
-**✅ Proモデル (Gemini 3 Pro)** - 強く推奨
-- 正確な色再現性（彩度/明度 99%）
-- `colorTolerance`: 30-50で安定動作
-- 本番環境の透過アセットに最適
-
-**⚠️ Flashモデル (Gemini 2.5 Flash)** - 精度に制限あり
-- 色ずれの問題（色相30-40°のシフト、彩度40-85%）
-- `colorTolerance`: **80-100を推奨**（最低80）
-- マゼンタ背景が最も安定、緑は避けること
-- 品質が重要な場合はProモデルを検討
-
-### 推奨設定
-
-| モデル | colorTolerance | 最適な背景色 |
-|-------|----------------|------------|
-| Pro   | 30-50          | マゼンタ、緑、シアン、青 |
-| Flash | 80-100         | マゼンタ（他の色は不安定） |
+- 透過PNGはFlashで十分運用可能です。
+- `colorTolerance` は 30 前後が最も安定でした。高すぎると誤検出が増えます。
 
 ### 推奨背景色
 
 | 色 | 16進数 | 最適な用途 |
 |-------|-----|----------|
 | マゼンタ | `#FF00FF` | ほとんどのスプライト（デフォルト、両モデルで動作） |
-| 緑 | `#00FF00` | 紫/ピンクのオブジェクト（Proモデルのみ） |
-| シアン | `#00FFFF` | 赤/オレンジのオブジェクト（Proモデルのみ） |
-| 青 | `#0000FF` | 黄/緑のオブジェクト（Proモデルのみ） |
+| 緑 | `#00FF00` | 紫/ピンクのオブジェクト |
+| シアン | `#00FFFF` | 赤/オレンジのオブジェクト |
+| 青 | `#0000FF` | 黄/緑のオブジェクト |
 
 ### 例
 
-**Proモデル（本番品質）:**
-```json
-{
-  "modelTier": "pro",
-  "transparent": true,
-  "transparentColor": "#FF00FF",
-  "colorTolerance": 40
-}
-```
-
-**Flashモデル（コスト効率重視、マゼンタのみ）:**
+**Flashモデル（透過PNG推奨）:**
 ```json
 {
   "modelTier": "flash",
   "transparent": true,
   "transparentColor": "#FF00FF",
-  "colorTolerance": 80
+  "colorTolerance": 30
 }
 ```
+
+### FringeModeの目安
+
+- ドット絵・スポーク・ネットのような細い線がある場合は `crisp`
+- 高解像度の一般的な画像は `hd`
+- `auto` は128pxを境に `crisp` / `hd` を切り替え
 
 ## ライセンス
 

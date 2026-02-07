@@ -31,6 +31,17 @@ Run:
 npm run test:full
 ```
 
+### Post-process only (no extra API calls)
+
+- Runs the post-process pipeline against a cached raw image.
+- The first run downloads an image from Gemini and caches it; subsequent runs reuse it.
+
+Run:
+
+```bash
+npx tsx test/test-transparency-only.ts
+```
+
 ## Environment Variables
 
 - `GEMINI_API_KEY` (required for real API calls)

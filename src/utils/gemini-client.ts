@@ -56,21 +56,30 @@ export async function generateWithGemini(options: GenerateWithGeminiOptions): Pr
   let enhancedPrompt = options.prompt;
   
   if (options.transparent) {
-    const bgColor = options.transparentColor || '#FF00FF';
+    const bgColor = (!options.transparentColor || options.transparentColor === 'auto')
+      ? '#FF00FF'
+      : options.transparentColor;
     const colorDesc = getColorDescription(bgColor);
+    const avoidedColors = getAvoidedColors(bgColor);
     
-    // Use chroma key terminology for better color accuracy
+    // Use chroma key terminology for better color accuracy.
+    // Note: even if the model doesn't produce the exact colour, the post-processor
+    // auto-detects the actual background colour and applies despill to clean edges.
     enhancedPrompt = `Subject: ${enhancedPrompt}
 
 CRITICAL BACKGROUND REQUIREMENT:
-The background MUST be a pure chroma key screen in ${bgColor} (${colorDesc}).
+The background MUST be a solid, uniform chroma key screen in ${bgColor} (${colorDesc}).
 This is a technical requirement for image compositing.
-- Background color: EXACTLY ${bgColor} ${colorDesc} with ZERO variation
-- Every background pixel must be PRECISELY this RGB value
-- Use a completely flat, solid color fill for the entire background
-- Subject must have sharp, clean edges with NO anti-aliasing against the background
-- NO gradients, NO feathering, NO soft edges, NO color blending
-- Think of this as a green screen / blue screen studio setup with perfect lighting
+- Fill the ENTIRE background with a single flat solid colour as close to ${bgColor} as possible
+- The background must be completely uniform — NO gradients, NO patterns, NO variation
+- Subject must have sharp, clean edges against the background
+- NO feathering or colour blending between subject and background
+- Think of this as a green screen / blue screen studio setup
+
+SUBJECT COLOR RESTRICTION:
+The subject itself must NOT contain any ${avoidedColors} tones.
+These colors are too close to the chroma key background and will be damaged during compositing.
+If the subject naturally has such colors, shift them to a clearly different hue.
 
 The background uniformity is critical for post-processing.`;
   }
@@ -170,6 +179,15 @@ The background uniformity is critical for post-processing.`;
 /**
  * Get human-readable color description with RGB values for prompt enhancement.
  */
+function parseHex(hexColor: string): { r: number; g: number; b: number } {
+  const cleanHex = hexColor.replace(/^#/, '');
+  const fullHex = cleanHex.length === 3
+    ? cleanHex.split('').map(c => c + c).join('')
+    : cleanHex;
+  const num = parseInt(fullHex, 16);
+  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 };
+}
+
 function getColorDescription(hexColor: string): string {
   const normalized = hexColor.toUpperCase();
   const colorNames: Record<string, string> = {
@@ -179,18 +197,41 @@ function getColorDescription(hexColor: string): string {
     '#00FFFF': 'cyan',
     '#FFFF00': 'yellow',
   };
-  
-  // Parse RGB values
-  const cleanHex = hexColor.replace(/^#/, '');
-  const fullHex = cleanHex.length === 3
-    ? cleanHex.split('').map(c => c + c).join('')
-    : cleanHex;
-  
-  const num = parseInt(fullHex, 16);
-  const r = (num >> 16) & 255;
-  const g = (num >> 8) & 255;
-  const b = num & 255;
-  
+  const { r, g, b } = parseHex(hexColor);
   const colorName = colorNames[normalized] || 'specified color';
   return `${colorName}, exact RGB(${r}, ${g}, ${b})`;
+}
+
+/**
+ * Return a list of color families that the subject should avoid,
+ * based on the chroma-key background colour.  This prevents Gemini from
+ * painting subject pixels in hues that are close to the key colour and
+ * would therefore be damaged by the despill / transparency pass.
+ */
+function getAvoidedColors(hexColor: string): string {
+  const { r, g, b } = parseHex(hexColor);
+
+  // Simple hue classification based on dominant channels
+  // Magenta family (high R + high B, low G)
+  if (r > 160 && b > 160 && g < 100) {
+    return 'pink, magenta, fuchsia, purple, violet, or lavender';
+  }
+  // Green family (high G, low R + B)
+  if (g > 160 && r < 100 && b < 100) {
+    return 'green, lime, chartreuse, mint, or teal';
+  }
+  // Blue family (high B, low R + G)
+  if (b > 160 && r < 100 && g < 100) {
+    return 'blue, indigo, navy, cobalt, or periwinkle';
+  }
+  // Cyan family (high G + B, low R)
+  if (g > 160 && b > 160 && r < 100) {
+    return 'cyan, turquoise, aqua, teal, or mint';
+  }
+  // Yellow family (high R + G, low B)
+  if (r > 160 && g > 160 && b < 100) {
+    return 'yellow, gold, amber, or lime-yellow';
+  }
+  // Fallback: generic warning
+  return 'colors similar to the background';
 }

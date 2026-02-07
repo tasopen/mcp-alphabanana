@@ -24,3 +24,6 @@ npm-debug.log*
 
 # Debug output
 *_debug_*.png
+
+# Test output
+test/output/

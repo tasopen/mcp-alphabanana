@@ -1,6 +1,6 @@
 {
   "name": "mcp-alphabanana",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for image generation using Google Gemini AI",
   "main": "dist/index.js",
   "type": "module",
@@ -35,7 +35,7 @@
   "dependencies": {
     "@google/genai": "^1.0.0",
     "fastmcp": "^3.31.0",
-    "sharp": "^0.33.0",
+    "sharp": "^0.34.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {

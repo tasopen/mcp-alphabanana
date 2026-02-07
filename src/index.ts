@@ -16,7 +16,7 @@ const __dirname = path.dirname(__filename);
 
 import { selectAspectRatio } from './utils/aspect-ratio.js';
 import { generateWithGemini, type ReferenceImage } from './utils/gemini-client.js';
-import { postProcess, saveDebugImage } from './utils/post-processor.js';
+import { postProcess, postProcessWithDebug, saveDebugImage } from './utils/post-processor.js';
 
 // Supported image extensions and their MIME types
 const SUPPORTED_IMAGE_TYPES: Record<string, 'image/png' | 'image/jpeg' | 'image/webp'> = {
@@ -50,7 +50,7 @@ async function loadReferenceImage(filePath: string, description?: string): Promi
 // Zod schema for generate_image parameters
 const GenerateImageParams = z.object({
   // Required parameters
-  prompt: z.string().describe('Description of the image to generate'),
+  prompt: z.string().describe('User-provided image prompt. Preserve the original wording and detail; do not summarize or translate. Only append transparency-related hints if needed.'),
   outputFileName: z.string().describe('Output filename (extension auto-added if missing)'),
   
   // Output format
@@ -77,11 +77,15 @@ const GenerateImageParams = z.object({
   
   // Transparency processing
   transparent: z.boolean().default(false)
-    .describe('Request transparent background (PNG only). Pro model recommended for accurate color rendering. Flash model requires colorTolerance 80+ for reliable results.'),
+    .describe('Request transparent background (PNG only). Background color is selected by histogram analysis.'),
   transparentColor: z.string().nullable().default(null)
-    .describe('Color to make transparent (hex format, e.g., #FF00FF)'),
+    .describe('Color to make transparent. Hex (e.g. #FF00FF). null defaults to #FF00FF when transparent=true.'),
   colorTolerance: z.number().int().min(0).max(255).default(30)
-    .describe('Tolerance for color matching (0-255). Pro model: 30-50 recommended. Flash model: 80-100 recommended due to color accuracy limitations.'),
+    .describe('Tolerance for color matching (0-255). Higher values are more permissive for transparent color selection and keying.'),
+
+  // Fringe reduction
+  fringeMode: z.enum(['auto', 'crisp', 'hd']).default('auto')
+    .describe('Fringe reduction mode: auto (size-based), crisp (binary alpha), hd (force-clear 1px boundary for large images).'),
   
   // Resize
   resizeMode: z.enum(['crop', 'stretch', 'letterbox', 'contain'])
@@ -121,13 +125,14 @@ const server = new FastMCP({
     Image asset generation server using Google Gemini AI.
     Supports transparent PNG output, multiple resolutions, and style references.
     Use outputType to control whether results are returned as files, base64, or both.
+    Preserve user prompts as-is. Do not summarize or translate; only add transparency-related hints when needed.
   `,
 });
 
 // Register the generate_image tool
 server.addTool({
   name: 'generate_image',
-  description: 'Generate image assets using Gemini AI with optional transparency and reference images',
+  description: 'Generate image assets using Gemini AI with optional transparency and reference images. Preserve the user prompt as-is; do not summarize or translate (only append transparency-related hints if needed).',
   parameters: GenerateImageParams,
   annotations: {
     title: 'Image Generator',
@@ -246,16 +251,39 @@ server.addTool({
       });
       
       const shouldApplyTransparency = args.transparent && args.outputFormat === 'png';
-      const processedBuffer = await postProcess(rawImageBuffer, {
+      // Resolve transparency color: null → 'auto' when transparent is true
+      const resolvedTransparentColor = shouldApplyTransparency
+        ? (args.transparentColor || '#FF00FF')
+        : null;
+
+      const postProcessOptions = {
         width: args.outputWidth,
         height: args.outputHeight,
-        format: args.outputFormat,
-        resizeMode: args.resizeMode,
-        transparentColor: shouldApplyTransparency 
-          ? (args.transparentColor || '#FF00FF') 
-          : null,
+        format: args.outputFormat as 'png' | 'jpg',
+        resizeMode: args.resizeMode as 'crop' | 'stretch' | 'letterbox' | 'contain',
+        transparentColor: resolvedTransparentColor,
         colorTolerance: args.colorTolerance,
-      });
+        fringeMode: args.fringeMode,
+      };
+
+      let processedBuffer: Buffer;
+      if (args.debug) {
+        const { buffer, debugInfo } = await postProcessWithDebug(rawImageBuffer, postProcessOptions);
+        processedBuffer = buffer;
+        if (debugInfo.selectedColor) {
+          log.info('Selected background color', { color: debugInfo.selectedColor, method: debugInfo.selectionMethod });
+        }
+        if (debugInfo.cornerColors || debugInfo.requestedColor) {
+          log.info('Transparency debug', {
+            requestedColor: debugInfo.requestedColor,
+            selectedColor: debugInfo.selectedColor,
+            selectionMethod: debugInfo.selectionMethod,
+            cornerColors: debugInfo.cornerColors,
+          });
+        }
+      } else {
+        processedBuffer = await postProcess(rawImageBuffer, postProcessOptions);
+      }
       
       // 5. Build result
       const result: GenerateImageOutput = {

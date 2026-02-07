@@ -108,9 +108,13 @@ const GenerateImageParams = z.object({
   transparent: z.boolean().default(false)
     .describe('Request transparent background (PNG only)'),
   transparentColor: z.string().nullable().default(null)
-    .describe('Color to make transparent (hex format, e.g., #FF00FF)'),
+    .describe('Color to make transparent. Hex (e.g. #FF00FF). null defaults to #FF00FF when transparent=true.'),
   colorTolerance: z.number().int().min(0).max(255).default(30)
-    .describe('Tolerance for transparent color matching'),
+    .describe('Tolerance for transparent color matching (0-255). Higher values are more permissive.'),
+
+  // Fringe reduction
+  fringeMode: z.enum(['auto', 'crisp', 'hd']).default('auto')
+    .describe('Fringe reduction mode: auto (size-based), crisp (binary alpha), hd (force-clear 1px boundary for large images).'),
   
   // Resize
   resizeMode: z.enum(['crop', 'stretch', 'letterbox', 'contain'])
@@ -369,20 +373,78 @@ Aspect ratios are automatically selected based on output dimensions:
 
 ## Transparency Processing
 
-### Algorithm (HSV-Based)
+### Pipeline Overview
 
-1. When `transparent: true` → Add transparent background instruction to prompt
-2. When `transparentColor` is set → Use HSV color space matching
-3. Supported key colors: Magenta (#FF00FF), Green (#00FF00), Blue (#0000FF)
+When `transparent: true` and `outputFormat: 'png'`, the following pipeline runs **before** resize:
+
+1. **Background Color Selection** — histogram analysis with hue proximity to requested key color
+2. **RGB Color-Key Removal** — make background pixels transparent
+3. **Despill** — remove key-colour contamination from boundary pixels
+4. **HD Boundary Clear** — for large images, force-clear a 1px boundary around transparency
+
+### Background Color Selection (Histogram + Hue)
+
+The server always uses the requested key color (default `#FF00FF`) as a reference, then selects the actual background color by histogram analysis of the generated image.
+
+**Algorithm:**
+1. Quantize RGB into 16x16x16 bins and build a histogram from all pixels
+2. Keep only bins that occupy at least 5% of the image
+3. Compute hue for each candidate bin, then select the bin with the closest hue to the requested key color
+4. A bin is only eligible if its hue distance is within a tolerance derived from `colorTolerance` (0-255 maps to 0-120 degrees)
+5. If no bin qualifies, fall back to corner sampling and pick the corner color whose hue is closest to the requested key color
+
+This handles color drift from the model while keeping the key color tied to the specified chroma hint.
+
+### Algorithm (RGB Color Key)
+
+1. When `transparent: true` → Add chroma key background instruction to Gemini prompt
+2. Select background color via histogram + hue proximity (fallback to corners)
+3. RGB distance matching with a tolerance-derived threshold
 4. Transparency is applied before resize (prevents color bleeding)
 
-### Recommended Background Colors
+### Despill (Key-Colour Fringe Removal)
+
+Boundary pixels between the subject and background often contain anti-aliased blends of the key colour, producing visible colour fringe (e.g., purple edges with magenta key). Despill is applied **in the same pixel loop** as colour keying, with zero additional passes.
+
+**Despill formulas by key colour:**
+
+| Key Colour | Formula | Effect |
+|------------|---------|--------|
+| Magenta (#FF00FF) | `R = R - strength × max(0, R-G)`, `B = B - strength × max(0, B-G)` | Clamps R and B toward G |
+| Green (#00FF00) | `G = G - strength × max(0, G-max(R,B))` | Clamps G toward max(R,B) |
+| Blue (#0000FF) | `B = B - strength × max(0, B-max(R,G))` | Clamps B toward max(R,G) |
+
+- Despill only applies to pixels **not** marked transparent but within an extended RGB distance (1.5-1.8x the key threshold)
+- Strength is proportional to proximity to the key colour — strong at the boundary, zero in the subject interior
+- Despill is always active when transparency is applied (no separate toggle needed); it has no measurable effect on non-boundary pixels
+
+### HD Boundary Clear
+
+When `fringeMode` resolves to `hd` (auto for >128px), the pipeline clears a 1px boundary adjacent to transparent pixels. This reduces visible fringe on large images without applying erode/blur smoothing.
+
+### Supported Key Colors
 
 | Color | Hex | Best For | Notes |
 |-------|-----|----------|-------|
-| Magenta | #FF00FF | Most sprites | Default. Good contrast with most assets |
+| Magenta | #FF00FF | Most sprites | Default hint. Good contrast with most assets |
 | Green | #00FF00 | Purple/pink objects | Use when subject contains magenta |
 | Blue | #0000FF | Green objects | Use when subject contains green |
+
+### `transparentColor` Parameter Values
+
+| Value | Behaviour |
+|-------|-----------|
+| `null` (default) | When `transparent: true`, defaults to `#FF00FF` |
+| `"#FF00FF"` (hex) | Used as the requested key color for histogram selection and prompting |
+| `"auto"` | Treated as `#FF00FF` (no automatic detection) |
+
+### `fringeMode` Values
+
+| Value | Behaviour |
+|-------|-----------|
+| `auto` | Size-based: longer side > 128 uses `hd`, otherwise `crisp` |
+| `crisp` | Binary alpha; best for thin lines and pixel art |
+| `hd` | Force-clear a 1px boundary around transparent pixels |
 
 ---
 
@@ -432,6 +494,21 @@ Aspect ratios are automatically selected based on output dimensions:
   "outputWidth": 64,
   "outputHeight": 64,
   "transparent": true
+}
+```
+
+### Transparency + Fringe Control
+
+```json
+{
+  "prompt": "Anime-style girl riding a bicycle",
+  "modelTier": "flash",
+  "outputFileName": "bicycle_girl",
+  "outputWidth": 1024,
+  "outputHeight": 576,
+  "transparent": true,
+  "colorTolerance": 30,
+  "fringeMode": "crisp"
 }
 ```
 
@@ -520,8 +597,8 @@ Aspect ratios are automatically selected based on output dimensions:
 | Supported formats | PNG, JPG | WebP may be added later |
 | Source resolution (flash) | 1K | gemini-2.5-flash limitation |
 | Source resolution (pro) | 1K, 2K, 4K | gemini-3-pro-image-preview |
-| Transparent background | PNG only | Color-key method |
-| Color tolerance range | 0-255 | Default: 30 |
+| Transparent background | PNG only | Color-key + auto-detect + despill |
+| Color tolerance range | 0-255 | Default: 30 (sufficient with auto-detection) |
 | Reference images (flash) | max 3 | API limitation |
 | Reference images (pro) | max 14 | API limitation |
 | Aspect ratios | 10 supported | Auto-selected |
@@ -534,6 +611,8 @@ Aspect ratios are automatically selected based on output dimensions:
 - **4K on flash tier:** If `sourceResolution: "4K"` is requested with `modelTier: "flash"`, the request is sent as-is to the API (no validation or downgrade).
 - **Reference images:** `referenceImages` are loaded from file paths and sent as inline image parts.
 - **Transparency with JPG:** If `transparent: true` and `outputFormat: "jpg"`, transparency is ignored and a warning is returned in the result message.
+- **Background color auto-detection:** The server uses histogram analysis with hue proximity to the requested key color, falling back to corner sampling when no histogram candidate qualifies.
+- **Despill:** Colour fringe removal (despill) is always active during transparency processing. It only affects boundary pixels and has no impact on subject interior colours.
 
 ---
 

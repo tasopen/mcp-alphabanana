@@ -166,8 +166,9 @@ Generate image assets using Gemini AI with optional transparency and reference i
 | `outputFormat` | enum | `png` | Output format: `png` or `jpg` |
 | `outputPath` | string | *optional* | Absolute output directory path (required when saving files) |
 | `transparent` | boolean | `false` | Request transparent background (PNG only) |
-| `transparentColor` | string | `null` | Color to make transparent (e.g., `#FF00FF`) |
+| `transparentColor` | string | `null` | Color to make transparent (e.g., `#FF00FF`), defaults to `#FF00FF` when null |
 | `colorTolerance` | number | `30` | Tolerance for transparent color matching (0-255) |
+| `fringeMode` | enum | `auto` | Fringe reduction mode: `auto`, `crisp`, `hd` (auto uses `crisp` <= 128px, otherwise `hd`) |
 | `resizeMode` | enum | `crop` | Resize mode: `crop`, `stretch`, `letterbox`, or `contain` |
 | `referenceImages` | array | `[]` | Reference images for style guidance (file paths) |
 | `debug` | boolean | `false` | Debug mode: output intermediate images |
@@ -184,6 +185,21 @@ Generate image assets using Gemini AI with optional transparency and reference i
   "outputWidth": 64,
   "outputHeight": 64,
   "transparent": true
+}
+```
+
+#### Transparency + Fringe Control
+
+```json
+{
+  "prompt": "Anime-style girl riding a bicycle",
+  "modelTier": "flash",
+  "outputFileName": "bicycle_girl",
+  "outputWidth": 1024,
+  "outputHeight": 576,
+  "transparent": true,
+  "colorTolerance": 30,
+  "fringeMode": "crisp"
 }
 ```
 
@@ -231,58 +247,39 @@ Generate image assets using Gemini AI with optional transparency and reference i
 
 ## Transparency Processing
 
-The server uses HSV color-space matching with adaptive saturation/brightness filters to make background colors transparent.
+The server selects the background color by histogram analysis and hue proximity to the requested key color, then applies RGB-distance keying and despill. If no histogram candidate qualifies, it falls back to the closest-hue corner color.
 
-### Model Recommendations
+### Model Notes
 
-**✅ Pro Model (Gemini 3 Pro)** - Highly Recommended
-- Accurate color rendering (99% saturation/brightness)
-- `colorTolerance`: 30-50 works reliably
-- Best for production transparent assets
-
-**⚠️ Flash Model (Gemini 2.5 Flash)** - Limited Accuracy
-- Color drift issues (30-40° hue shift, 40-85% saturation)
-- `colorTolerance`: **80-100 recommended** (minimum 80)
-- Magenta background works best; avoid green
-- Consider Pro model if quality is critical
-
-### Recommended Settings
-
-| Model | colorTolerance | Best Background Colors |
-|-------|----------------|------------------------|
-| Pro   | 30-50          | Magenta, Green, Cyan, Blue |
-| Flash | 80-100         | Magenta (other colors unreliable) |
+- Flash is sufficient for transparent PNG output in typical use.
+- `colorTolerance` around 30 performed best in tests; higher values can increase false positives.
 
 ### Recommended Background Colors
 
 | Color | Hex | Best For |
 |-------|-----|----------|
 | Magenta | `#FF00FF` | Most sprites (default, works with both models) |
-| Green | `#00FF00` | Purple/pink objects (Pro model only) |
-| Cyan | `#00FFFF` | Red/orange objects (Pro model only) |
-| Blue | `#0000FF` | Yellow/green objects (Pro model only) |
+| Green | `#00FF00` | Purple/pink objects |
+| Cyan | `#00FFFF` | Red/orange objects |
+| Blue | `#0000FF` | Yellow/green objects |
 
 ### Examples
 
-**Pro model (production quality):**
-```json
-{
-  "modelTier": "pro",
-  "transparent": true,
-  "transparentColor": "#FF00FF",
-  "colorTolerance": 40
-}
-```
-
-**Flash model (cost-effective, magenta only):**
+**Flash model (recommended for transparent PNG):**
 ```json
 {
   "modelTier": "flash",
   "transparent": true,
   "transparentColor": "#FF00FF",
-  "colorTolerance": 80
+  "colorTolerance": 30
 }
 ```
+
+### Fringe Mode Guidance
+
+- Use `crisp` when thin lines risk being removed (pixel art, bicycle spokes, wire meshes).
+- Use `hd` for general high-resolution images where fringe is noticeable.
+- Use `auto` for a size-based default (`crisp` for <= 128px, `hd` otherwise).
 
 ## License
 

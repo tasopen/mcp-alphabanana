@@ -188,6 +188,21 @@ Generate image assets using Gemini AI with optional transparency and reference i
 }
 ```
 
+
+#### Transparent Sprite
+
+```json
+{
+  "prompt": "Retro game-style space fighter sprite, blue-tinted silver, clean silhouette, no background, no text, no letters, no numbers, no logos",
+  "modelTier": "flash",
+  "outputFileName": "space_fighter",
+  "outputWidth": 64,
+  "outputHeight": 64,
+  "transparent": true
+}
+```
+
+
 #### Transparency + Fringe Control
 
 ```json
@@ -203,31 +218,6 @@ Generate image assets using Gemini AI with optional transparency and reference i
 }
 ```
 
-#### Transparent Samples (no fringe or tolerance)
-
-```json
-{
-  "prompt": "Retro game-style space fighter sprite, blue-tinted silver, clean silhouette, no background, no text, no letters, no numbers, no logos",
-  "modelTier": "flash",
-  "outputFileName": "space_fighter_morning",
-  "outputWidth": 64,
-  "outputHeight": 64,
-  "transparent": true
-}
-```
-
-```json
-{
-  "prompt": "Anime-style girl riding a bicycle, dynamic pose, clean outline",
-  "modelTier": "flash",
-  "outputFileName": "bicycle_girl_1024x768",
-  "outputWidth": 1024,
-  "outputHeight": 768,
-  "transparent": true,
-  "colorTolerance": 45,
-  "fringeMode": "crisp"
-}
-```
 
 #### High-Resolution Background
 

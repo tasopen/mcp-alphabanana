@@ -1,19 +1,21 @@
 {
-  "name": "mcp-alphabanana",
-  "version": "1.1.0",
+  "name": "@tasopen/mcp-alphabanana",
+  "version": "1.2.0",
   "description": "MCP server for image generation using Google Gemini AI",
   "main": "dist/index.js",
   "type": "module",
+  "bin": {
+    "mcp-alphabanana": "./dist/index.js"
+  },
   "files": [
-    "src/",
     "dist/",
-    "tsconfig.json",
     "README.md",
     "README.ja.md",
     "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
+    "prepublishOnly": "npm run build && npm run test:sanity",
     "dev": "npx fastmcp dev src/index.ts",
     "inspect": "npx fastmcp inspect src/index.ts",
     "start": "node dist/index.js",

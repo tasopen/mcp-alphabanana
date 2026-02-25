@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0 (2026-02-26)
+
+- Added support for npm package distribution and installation.
+
 ## 1.1.0 (2026-02-07)
 
 - Improve prompt preservation by documenting "no summarization/translation" guidance in MCP server instructions and tool metadata.

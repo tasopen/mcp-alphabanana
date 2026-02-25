@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * mcp-alphabanana - FastMCP server for image generation using Google Gemini AI.
  * Supports transparent PNG output, multiple resolutions, and style references.

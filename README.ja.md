@@ -1,34 +1,31 @@
 # mcp-alphabanana
 
-[English](README.md) | 日本語
+English | [日本語](README.ja.md)
 
-Google Gemini AIを使用して画像アセットを生成するModel Context Protocol (MCP) サーバー。
+Google Gemini AI を使って画像アセットを生成する Model Context Protocol (MCP) サーバー。
 
-[FastMCP 3](https://www.npmjs.com/package/fastmcp)で構築され、シンプルなコードベースと柔軟な出力オプションを提供します。
+[FastMCP 3](https://www.npmjs.com/package/fastmcp) で構築され、シンプルなコードベースと柔軟な出力オプションを提供します。
 
 ## 機能
 
-- Google Gemini AIによる**汎用画像生成**
-- カラーキー後処理による**透過PNG出力**
+- **Google Gemini AI による汎用画像生成**
+- **カラーキー後処理による透過 PNG 出力**
 - **複数の出力形式**: ファイル、base64、または両方
-- スタイル参照のための**参照画像サポート**
+- **スタイル参照のための参照画像サポート**
 - **柔軟なリサイズモード**: crop、stretch、letterbox、contain
 - **複数のモデルティア**: flash (Gemini 2.5 Flash) または pro (Gemini 3 Pro)
 
 ## インストール
 
-```bash
-npm install
-npm run build
-```
+`@tasopen/mcp-alphabanana` を MCP サーバー設定に追加してください。
 
 ## 設定
 
-`GEMINI_API_KEY` は MCP の設定（例: `mcp.json`）に設定してください。エージェント環境では OS 環境変数にアクセスできない場合があるため、`mcp.json` で OS 環境変数を参照するか、直接キーを設定することができます。
+`GEMINI_API_KEY` を MCP 設定（例: `mcp.json`）で設定します。一部のエージェント環境では OS 環境変数にアクセスできないため、`mcp.json` で OS 環境変数を参照するか、直接キーを記載できます。
 
 例:
 
-- `mcp.json` で OS 環境変数を参照する:
+- `mcp.json` で OS 環境変数を参照:
 
 ```json
 {
@@ -38,7 +35,7 @@ npm run build
 }
 ```
 
-- `mcp.json` に直接キーを記載する（エージェントが OS 環境変数を参照できない場合に有用）:
+- `mcp.json` に直接キーを記載（エージェントが OS 環境変数を参照できない場合に有用）:
 
 ```json
 {
@@ -52,16 +49,15 @@ npm run build
 
 ## VS Code 統合
 
-VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加し、`mcp.json` の `env` を設定するか、VS Code の MCP 設定から環境変数を指定します。OS 環境変数を参照する場合と、直接キーを記載する場合の両方の例を示します。
+VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加し、サーバー `env` を `mcp.json` または VS Code MCP 設定で設定します。OS 環境変数参照または直接キー記載の両方に対応:
 
 ```json
 {
   "mcp": {
     "servers": {
       "mcp-alphabanana": {
-        "type": "stdio",
-        "command": "node",
-        "args": ["c:/path/to/mcp-alphabanana/dist/index.js"],
+        "command": "npx",
+        "args":["-y", "@tasopen/mcp-alphabanana"],
         "env": {
           "GEMINI_API_KEY": "${env:GEMINI_API_KEY}"  // or "your_api_key_here"
         }
@@ -71,19 +67,18 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 }
 ```
 
-**重要:** 上記の `"args"` に指定したパスは、クローンした MCP サーバーのフォルダにある `dist/index.js`（またはビルドした `index.js`）の**絶対パス**に必ず置き換えてください。指定を変更しないとサーバーは起動しません。
+**オプション:** 書き込み失敗時のカスタムフォールバックディレクトリを指定する場合は `MCP_FALLBACK_OUTPUT` を `env` に追加してください。
 
-フォールバック出力先をカスタマイズするには、`env` に `MCP_FALLBACK_OUTPUT` を追加してください。
-## Antigravity（`mcp_config.json`）
+## Antigravity (mcp_config.json)
 
-Antigravity はグローバルな `mcp_config.json` を使用して MCP サーバーを登録します。例:
+Antigravity ではグローバルな `mcp_config.json` で MCP サーバーを登録します。例:
 
 ```json
 {
   "mcpServers": {
     "mcp-alphabanana": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@tasopen/mcp-alphabanana"],
       "env": {
         "GEMINI_API_KEY": "your_api_key_here"
       }
@@ -92,18 +87,18 @@ Antigravity はグローバルな `mcp_config.json` を使用して MCP サー�
 }
 ```
 
-注: このリポジトリでは `mcp_config.json` を Antigravity 用として使用し、サーバーが起動して画像生成ができることを確認しました。
+注: このリポジトリでは `mcp_config.json` に `mcp-alphabanana` エントリ（Antigravity）を追加し、サーバー起動と画像生成の動作を確認しています。
 
 ## Claude Desktop
 
-Claude Desktop を使用する場合は、`claude_desktop_config.json` にエントリを追加します。例:
+Claude Desktop で MCP サーバーを動かす場合は `claude_desktop_config.json` にエントリを追加:
 
 ```json
 {
   "mcpServers": {
     "mcp-alphabanana": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@tasopen/mcp-alphabanana"],
       "env": {
         "GEMINI_API_KEY": "your_api_key_here"
       }
@@ -112,32 +107,33 @@ Claude Desktop を使用する場合は、`claude_desktop_config.json` にエン
 }
 ```
 
-動作確認: 上記を Claude Desktop に追加して起動すると、MCP サーバーが起動し画像生成が動作しました。
+テスト済み: 上記エントリを Claude Desktop に追加しサーバーを起動すると、MCP サーバーが起動し画像生成が動作しました。
+
 ### 環境変数
 
 | 変数 | 必須 | 説明 |
 |----------|----------|-------------|
-| `GEMINI_API_KEY` | はい | Google AI Studio APIキー。`mcp.json` にて OS 環境変数を参照する（`${env:GEMINI_API_KEY}`）か、エージェント要件により直接キーを設定してください。 |
-| `MCP_FALLBACK_OUTPUT` | いいえ | 書き込み失敗時のフォールバックディレクトリ (デフォルト: `<install-dir>/fallback-output`) |
+| `GEMINI_API_KEY` | Yes | Google AI Studio APIキー。`mcp.json` で OS 環境変数参照（`${env:GEMINI_API_KEY}`）または直接キー記載（エージェントが OS 環境変数にアクセス不可な場合） |
+| `MCP_FALLBACK_OUTPUT` | No | 書き込み失敗時のフォールバックディレクトリ（デフォルト: `<install-dir>/fallback-output`） |
 
 ### 出力パスのベストプラクティス
 
-**常に `outputPath` には絶対パスを使用してください。**
+**常に `outputPath` には絶対パスを使ってください:**
 
-✅ **良い例:** `"C:/Users/you/project/assets"`, `"/home/user/images"`  
-❌ **悪い例:** `"./"`, `"output/"`, `"../images"`
+✅ 良い例: "C:/Users/you/project/assets", "/home/user/images"  
+❌ 悪い例: `"./"`, `"output/"`, `"../images"`
 
 相対パスは MCP サーバーの作業ディレクトリから解決されるため、サービス実行時に予期しない場所にファイルが作成される可能性があります。
 
 **フォールバック動作:**
-- 指定した `outputPath` が書き込み可能な場合 → 通常通り画像を保存
-- 書き込み不可の場合（パーミッション拒否など） → `MCP_FALLBACK_OUTPUT` または `<install-dir>/fallback-output` に保存し、レスポンスに `warning` を含める
+- 指定した `outputPath` が書き込み可能 → 通常通り画像を保存
+- 書き込み不可（パーミッション拒否など） → フォールバックディレクトリに保存しレスポンスに `warning` を含める
 - フォールバックも失敗した場合 → エラーを返す
 
 ## 開発
 
 ```bash
-# MCP CLIで開発モード
+# 開発モード（MCP CLI）
 npm run dev
 
 # MCP Inspector (Web UI)
@@ -149,7 +145,7 @@ npm run build
 
 ## ツール: generate_image
 
-オプションの透過処理と参照画像を使用してGemini AIで画像アセットを生成します。
+Gemini AI で画像アセットを生成（オプションで透過・参照画像対応）。
 
 ### パラメータ
 
@@ -165,7 +161,7 @@ npm run build
 | `outputFormat` | enum | `png` | 出力形式: `png`または`jpg` |
 | `outputPath` | string | *任意* | 絶対パスの出力ディレクトリ（ファイル保存時は必須） |
 | `transparent` | boolean | `false` | 透過背景をリクエスト（PNGのみ） |
-| `transparentColor` | string | `null` | 透明にする色（例: `#FF00FF`） |
+| `transparentColor` | string | `null` | 透過にする色（例: `#FF00FF`、未指定時は #FF00FF） |
 | `colorTolerance` | number | `30` | 透過色マッチングの許容範囲（0-255） |
 | `fringeMode` | enum | `auto` | フリンジ処理: `auto`、`crisp`、`hd`（autoは128px以下で`crisp`、それ以外は`hd`） |
 | `resizeMode` | enum | `crop` | リサイズモード: `crop`、`stretch`、`letterbox`、または`contain` |
@@ -259,12 +255,12 @@ npm run build
 
 ## 透過処理
 
-サーバーはヒストグラム分析と色相近接により背景色を推定し、RGB距離でキー抜きを行います。
+サーバーはヒストグラム分析と色相近接により背景色を推定し、RGB距離でキー抜きを行いデスピルします。候補がなければ最も近い色相のコーナーカラーを使用します。
 
 ### モデルメモ
 
-- 透過PNGはFlashで十分運用可能です。
-- `colorTolerance` は 30 前後が最も安定でした。高すぎると誤検出が増えます。
+- 透過 PNG 出力は通常 flash で十分です。
+- `colorTolerance` は 30 前後が最も安定しました。高すぎると誤検出が増えます。
 
 ### 推奨背景色
 
@@ -285,11 +281,11 @@ npm run build
 }
 ```
 
-### FringeModeの目安
+### Fringe Mode ガイド
 
-- ドット絵・スポーク・ネットのような細い線がある場合は `crisp`
-- 高解像度の一般的な画像は `hd`
-- `auto` は128pxを境に `crisp` / `hd` を切り替え
+- 細い線が消えやすい場合（ドット絵、スポーク、ワイヤーメッシュ等）は `crisp`
+- 高解像度画像でフリンジが目立つ場合は `hd`
+- `auto` はサイズで自動切替（128px 以下は `crisp`、それ以外は `hd`）
 
 ## ライセンス
 

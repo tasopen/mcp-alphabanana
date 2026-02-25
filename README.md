@@ -17,10 +17,7 @@ Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified c
 
 ## Installation
 
-```bash
-npm install
-npm run build
-```
+add `@tasopen/mcp-alphabanana` to your MCP Servers configuration.
 
 ## Configuration
 
@@ -59,9 +56,8 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
   "mcp": {
     "servers": {
       "mcp-alphabanana": {
-        "type": "stdio",
-        "command": "node",
-        "args": ["c:/path/to/mcp-alphabanana/dist/index.js"],
+        "command": "npx",
+        "args":["-y", "@tasopen/mcp-alphabanana"],
         "env": {
           "GEMINI_API_KEY": "${env:GEMINI_API_KEY}"  // or "your_api_key_here"
         }
@@ -81,8 +77,8 @@ Antigravity uses a global `mcp_config.json` to register MCP servers. Example `mc
 {
   "mcpServers": {
     "mcp-alphabanana": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@tasopen/mcp-alphabanana"],
       "env": {
         "GEMINI_API_KEY": "your_api_key_here"
       }
@@ -101,8 +97,8 @@ If you run MCP servers via Claude Desktop, add an entry in `claude_desktop_confi
 {
   "mcpServers": {
     "mcp-alphabanana": {
-      "command": "node",
-      "args": ["C:/path/to/mcp-alphabanana/dist/index.js"],
+      "command": "npx",
+      "args": ["-y", "@tasopen/mcp-alphabanana"],
       "env": {
         "GEMINI_API_KEY": "your_api_key_here"
       }

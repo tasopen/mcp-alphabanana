@@ -8,19 +8,27 @@ import type { AspectRatioKey } from './aspect-ratio.js';
 
 // Model configuration
 const MODELS = {
+  'Flash3.1': 'gemini-3.1-flash-image-preview',
+  'Flash2.5': 'gemini-2.5-flash-image',
+  'Pro3': 'gemini-3-pro-image-preview',
+  // Aliases for backward compatibility
+  flash: 'gemini-3.1-flash-image-preview',
   pro: 'gemini-3-pro-image-preview',
-  flash: 'gemini-2.5-flash-image',
 } as const;
 
-// Source resolution mapping (pixels)
-const SOURCE_RESOLUTIONS = {
-  '1K': 1024,
-  '2K': 2048,
-  '4K': 4096,
+// Source resolution mapping (API supported values: '512', '1K', '2K', '4K')
+// '512' provides smaller assets suitable for icons, while '1K' is the quality default.
+const SOURCE_RESOLUTIONS: Record<SourceResolution, string> = {
+  '0.5K': '512',
+  '1K': '1K',
+  '2K': '2K',
+  '4K': '4K',
 } as const;
 
-export type ModelTier = 'flash' | 'pro';
-export type SourceResolution = '1K' | '2K' | '4K';
+export type ModelTier = 'Flash3.1' | 'Flash2.5' | 'Pro3' | 'flash' | 'pro';
+export type SourceResolution = '0.5K' | '1K' | '2K' | '4K';
+export type GroundingType = 'none' | 'text' | 'image' | 'both';
+export type ThinkingMode = 'minimal' | 'high';
 
 export interface ReferenceImage {
   description?: string;
@@ -36,6 +44,18 @@ export interface GenerateWithGeminiOptions {
   transparent: boolean;
   transparentColor: string | null;
   referenceImages: ReferenceImage[];
+  groundingType?: GroundingType;
+  thinkingMode?: ThinkingMode;
+  includeThoughts?: boolean;
+}
+
+/**
+ * Helper to truncate base64 strings for logging.
+ * Returns first 12 chars ... last 12 chars.
+ */
+function truncateBase64(data: string): string {
+  if (data.length <= 30) return data;
+  return `${data.slice(0, 12)}...${data.slice(-12)} (total: ${data.length} chars)`;
 }
 
 /**
@@ -51,17 +71,17 @@ export async function generateWithGemini(options: GenerateWithGeminiOptions): Pr
 
   const genAI = new GoogleGenAI({ apiKey });
   const model = MODELS[options.modelTier];
-  
+
   // Build the prompt with transparency instructions
   let enhancedPrompt = options.prompt;
-  
+
   if (options.transparent) {
     const bgColor = (!options.transparentColor || options.transparentColor === 'auto')
       ? '#FF00FF'
       : options.transparentColor;
     const colorDesc = getColorDescription(bgColor);
     const avoidedColors = getAvoidedColors(bgColor);
-    
+
     // Use chroma key terminology for better color accuracy.
     // Note: even if the model doesn't produce the exact colour, the post-processor
     // auto-detects the actual background colour and applies despill to clean edges.
@@ -103,42 +123,94 @@ The background uniformity is critical for post-processing.`;
     }
   }
 
+  // Infuse aspect ratio hint into instructions to ensure the model honors it (especially for 512px)
+  const ratioHint = options.aspectRatio === '1:1' ? 'square 1:1 format' : `${options.aspectRatio} aspect ratio`;
+  const finalPrompt = `${enhancedPrompt}\n\nIMPORTANT: Focus on generating a high-quality asset in a ${ratioHint}.`;
+
   // Add the main prompt
   parts.push({
-    text: enhancedPrompt,
+    text: finalPrompt,
   });
 
-  // Configure generation parameters with image_config for aspect ratio and resolution
-  // See: https://ai.google.dev/gemini-api/docs/image-generation#aspect-ratios-and-image-size
-  // Use snake_case keys to match server expectations from docs examples
+  // Configure generation parameters with imageConfig for aspect ratio and resolution
+  // Use camelCase keys to match @google/genai SDK v1.0.0+ expectations
   const generationConfig: Record<string, unknown> = {
-    response_modalities: ['IMAGE', 'TEXT'],
-    image_config: {
-      aspect_ratio: options.aspectRatio,
-      // Ensure an explicit image_size for all models (use 1K for flash by default)
-      image_size: options.modelTier === 'flash' ? '1K' : options.sourceResolution,
+    responseModalities: ['IMAGE', 'TEXT'],
+    imageConfig: {
+      aspectRatio: options.aspectRatio,
+      imageSize: SOURCE_RESOLUTIONS[options.sourceResolution],
     },
   };
 
-  // For pro tier, allow a larger image_size and thinking budget
-  if (options.modelTier === 'pro') {
-    (generationConfig as any).image_config = {
-      aspect_ratio: options.aspectRatio,
-      image_size: options.sourceResolution,
-    };
-    (generationConfig as any).thinking_config = {
-      thinking_budget: 1024,
-    };
+  const isGemini3 = model.includes('gemini-3');
+
+  // Thinking
+  if (isGemini3) {
+    if (options.thinkingMode === 'high') {
+      (generationConfig as any).thinkingConfig = {
+        thinkingBudget: 1024,
+      };
+    }
+  }
+
+  const reqObj: any = {
+    model,
+    contents: [{ role: 'user', parts }],
+    config: generationConfig,
+  };
+
+  // Grounding
+  if (isGemini3 && options.groundingType && options.groundingType !== 'none') {
+    reqObj.tools = [];
+    if (options.groundingType === 'text' || options.groundingType === 'both') {
+      reqObj.tools.push({ googleSearch: {} });
+    }
   }
 
   // Generate content
+  console.error('--- GEMINI API REQUEST ---');
+  console.error(JSON.stringify({
+    model,
+    generationConfig,
+    grounding: options.groundingType,
+    parts: parts.map(p => {
+      if ('inlineData' in p && p.inlineData) {
+        return {
+          type: 'inlineData',
+          mimeType: p.inlineData.mimeType,
+          data: p.inlineData.data ? truncateBase64(p.inlineData.data) : '(no data)'
+        };
+      }
+      return p;
+    }),
+  }, null, 2));
+
   let response;
   try {
-    response = await genAI.models.generateContent({
-      model,
-      contents: [{ role: 'user', parts }],
-      config: generationConfig,
-    });
+    const result = (await genAI.models.generateContent(reqObj)) as any;
+    response = result;
+
+    console.error('--- GEMINI API RESPONSE ---');
+    if (response && response.candidates && response.candidates.length > 0) {
+      try {
+        const respLog = JSON.parse(JSON.stringify(response));
+        // Truncate base64 in response logs
+        if (respLog.candidates[0].content && respLog.candidates[0].content.parts) {
+          respLog.candidates[0].content.parts = respLog.candidates[0].content.parts.map((p: any) => {
+            if (p.inlineData && p.inlineData.data) {
+              p.inlineData.data = truncateBase64(p.inlineData.data);
+            }
+            return p;
+          });
+        }
+        console.error(JSON.stringify(respLog, null, 2));
+      } catch (logErr) {
+        console.error('Error stringifying response for log:', logErr);
+        console.error('Raw response candidates count:', response.candidates.length);
+      }
+    } else {
+      console.error('No candidates or invalid response object.');
+    }
   } catch (err) {
     // Attach request details to the error for easier debugging
     const details = {
@@ -154,22 +226,22 @@ The background uniformity is critical for post-processing.`;
     throw new Error(`Gemini API call failed: ${msg} | request=${JSON.stringify(details)}`);
   }
 
-  // Extract image from response
-  const candidates = response.candidates;
-  if (!candidates || candidates.length === 0) {
-    throw new Error('No candidates in response. Try refining the prompt.');
-  }
-
-  const content = candidates[0].content;
-  if (!content || !content.parts) {
-    throw new Error('No content parts in response. Try refining the prompt.');
-  }
-
-  // Find the image part
-  for (const part of content.parts) {
-    if (part.inlineData && part.inlineData.data) {
-      const base64Data = part.inlineData.data;
-      return Buffer.from(base64Data, 'base64');
+  if (response && response.candidates && response.candidates.length > 0) {
+    const candidates = response.candidates;
+    const content = candidates[0].content;
+    if (content && content.parts) {
+      // Find the image part
+      for (const part of content.parts) {
+        if (part.inlineData && part.inlineData.data) {
+          const base64Data = part.inlineData.data;
+          return Buffer.from(base64Data, 'base64');
+        } else {
+          console.error(`Found non-image part in response: ${Object.keys(part).join(', ')}`);
+          if (part.text) {
+            console.error(`Part text: ${part.text.slice(0, 100)}...`);
+          }
+        }
+      }
     }
   }
 

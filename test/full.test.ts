@@ -57,12 +57,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A flat red square icon with a white border.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_base64',
         outputType: 'base64',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'png',
+        output_format: 'png',
         transparent: false,
       },
     });
@@ -81,12 +81,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A minimal green triangle with a simple outline.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_combine',
         outputType: 'combine',
         outputWidth: 48,
         outputHeight: 48,
-        outputFormat: 'png',
+        output_format: 'png',
         outputPath: outputDir,
         transparent: false,
       },
@@ -109,12 +109,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple yellow star with a solid background.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_jpg',
         outputType: 'base64',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'jpg',
+        output_format: 'jpg',
         transparent: true,
       },
     });
@@ -131,18 +131,21 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple mountain silhouette with a gradient sky.',
-        modelTier: 'pro',
-        sourceResolution: '4K',
+        model: 'pro',
+        output_resolution: '4K',
         outputFileName: 'full_pro_4k',
         outputType: 'base64',
         outputWidth: 64,
         outputHeight: 64,
-        outputFormat: 'png',
+        output_format: 'png',
         transparent: false,
       },
     });
 
     const parsed = parseToolResult(result);
+    if (!parsed.success) {
+      console.error('Pro 4K test failed:', parsed.message);
+    }
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
@@ -155,12 +158,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A placeholder icon for validation.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_relative',
         outputType: 'file',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'png',
+        output_format: 'png',
         outputPath: '.\\relative',
       },
     });
@@ -179,12 +182,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'Match the style of the reference image.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_reference',
         outputType: 'base64',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'png',
+        output_format: 'png',
         referenceImages: [
           {
             description: 'Tiny sample image',
@@ -208,12 +211,12 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A gray circle used for fallback testing.',
-        modelTier: 'flash',
+        model: 'flash',
         outputFileName: 'full_fallback',
         outputType: 'file',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'png',
+        output_format: 'png',
         outputPath: unwritablePath,
         transparent: false,
       },

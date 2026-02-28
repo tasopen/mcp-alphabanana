@@ -15,6 +15,11 @@ export const SUPPORTED_ASPECT_RATIOS = {
   '9:16': 9 / 16,     // 0.5625 - Mobile backgrounds
   '16:9': 16 / 9,     // 1.778 - Game backgrounds
   '21:9': 21 / 9,     // 2.333 - Ultra-wide backgrounds
+  // Nano Banana 2 extreme ratios
+  '1:4': 1 / 4,       // 0.25 - Extremely tall
+  '4:1': 4 / 1,       // 4.0 - Extremely wide
+  '1:8': 1 / 8,       // 0.125 - Ultra tall
+  '8:1': 8 / 1,       // 8.0 - Ultra wide
 } as const;
 
 export type AspectRatioKey = keyof typeof SUPPORTED_ASPECT_RATIOS;
@@ -27,10 +32,10 @@ export type AspectRatioKey = keyof typeof SUPPORTED_ASPECT_RATIOS;
  */
 export function selectAspectRatio(width: number, height: number): AspectRatioKey {
   const targetRatio = width / height;
-  
+
   let closestRatio: AspectRatioKey = '1:1';
   let minDifference = Infinity;
-  
+
   for (const [ratioKey, ratioValue] of Object.entries(SUPPORTED_ASPECT_RATIOS)) {
     const difference = Math.abs(targetRatio - ratioValue);
     if (difference < minDifference) {
@@ -38,7 +43,7 @@ export function selectAspectRatio(width: number, height: number): AspectRatioKey
       closestRatio = ratioKey as AspectRatioKey;
     }
   }
-  
+
   return closestRatio;
 }
 

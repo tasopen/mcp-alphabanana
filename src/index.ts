@@ -60,18 +60,18 @@ const GenerateImageParams = z.object({
     .describe('Output format: file=file only, base64=base64 only, combine=both'),
 
   // Model settings (REQUIRED - affects cost and capabilities)
-  model: z.enum(['Flash3.1', 'Flash2.5', 'Pro3', 'flash', 'pro']).default('Flash3.1')
-    .describe('Model tier to use for generation'),
-  output_resolution: z.enum(['0.5K', '1K', '2K', '4K']).default('1K')
-    .describe('Gemini generation source resolution'),
+    // See tool description for model details. 'flash' and 'pro' are aliases for Flash2.5 and Pro3, kept for compatibility.
+    model: z.enum(['Flash3.1', 'Flash2.5', 'Pro3', 'flash', 'pro']).default('Flash3.1')
+      .describe('Model tier to use for generation (see tool description for details; "flash" and "pro" are aliases for Flash2.5 and Pro3)'),
+    // output_resolution is normally auto-calculated from pixel size; set only to intentionally override. The final image is always resized to the requested pixel size after generation.
+    output_resolution: z.enum(['0.5K', '1K', '2K', '4K']).optional()
+      .describe('Gemini generation source resolution (optional; normally auto-calculated from pixel size. Set only to override. Final image is resized to requested pixel size.)'),
 
   // Output dimensions
-  outputWidth: z.number().int().min(8).max(4096).default(1024)
-    .describe('Output image width in pixels'),
-  outputHeight: z.number().int().min(8).max(4096).default(1024)
-    .describe('Output image height in pixels'),
-  aspect_ratio: z.string().optional()
-    .describe('Aspect ratio (e.g. "16:9"). Overrides auto-selection from dimensions.'),
+  outputWidth: z.number().int().min(8).max(4096)
+    .describe('Output image width in pixels. The image will be generated using the closest supported Gemini aspect ratio and resolution, then resized to this width. To avoid cropping or padding, set width and height to match a supported aspect ratio (see tool description).'),
+  outputHeight: z.number().int().min(8).max(4096)
+    .describe('Output image height in pixels. The image will be generated using the closest supported Gemini aspect ratio and resolution, then resized to this height. To avoid cropping or padding, set width and height to match a supported aspect ratio (see tool description).'),
   output_format: z.enum(['png', 'jpg', 'webp']).default('png')
     .describe('Output format'),
   outputPath: z.string().optional()
@@ -142,7 +142,7 @@ const server = new FastMCP({
 // Register the generate_image tool
 server.addTool({
   name: 'generate_image',
-  description: 'Generate image assets using Gemini AI with optional transparency and reference images. Preserve the user prompt as-is; do not summarize or translate (only append transparency-related hints if needed).',
+  description: `Generate image assets using Gemini AI with optional transparency and reference images.\n\n[Model Guidance]\n- Flash3.1 (recommended): High quality, very fast, supports grounding and advanced features.\n- Pro3: Higher fidelity, but more costly and slower.\n- Flash2.5: Legacy, maintained for compatibility. Does not support 0.5K, 2K, or 4K resolutions.\n\n[Aspect Ratios & Pixel Sizes]\nGemini supports the following aspect ratios (model-dependent):\n- Common to all models: 1:1 (e.g. 512x512, 1024x1024), 2:3 (424x632, 848x1264), 3:2 (632x424, 1264x848), 3:4 (448x600, 896x1200), 4:3 (600x448, 1200x896), 4:5 (410x512, 820x1024), 5:4 (512x410, 1024x820), 9:16 (360x640, 720x1280), 16:9 (688x384, 1376x768), 21:9 (896x384, 1792x768)\n- Flash3.1 only: 1:4 (128x512, 256x1024), 4:1 (512x128, 1024x256), 1:8 (64x512, 128x1024), 8:1 (512x64, 1024x128)\n(0.5K/1K: see above, 2K/4K: double these sizes)\n\nTo avoid cropping or padding, set width and height to match a supported aspect ratio. If the requested size does not match, the image will be center-cropped or padded after generation.\nIf you intentionally want to control the resizing/cropping behavior, use the 'resizeMode' parameter: 'crop' (default, center crop), 'letterbox' (fit with padding), 'contain' (trim transparent margins then fit), or 'stretch' (distort to fit).\n\n[IMPORTANT]\nAlways preserve the user's prompt as-is, including language and nuance. Do not translate or summarize.`,
   parameters: GenerateImageParams,
   annotations: {
     title: 'Image Generator',
@@ -182,8 +182,8 @@ server.addTool({
         log.warn('Transparency requested with JPG format - transparency will be ignored');
       }
 
-      // 1. Calculate aspect ratio
-      const aspectRatio = (args.aspect_ratio as import('./utils/aspect-ratio.js').AspectRatioKey) || selectAspectRatio(args.outputWidth, args.outputHeight);
+      // 1. Calculate aspect ratio (always auto-calculated)
+      const aspectRatio = selectAspectRatio(args.outputWidth, args.outputHeight);
       log.info('Selected aspect ratio', { aspectRatio });
 
       // 2. Load and prepare reference images from file paths
@@ -208,10 +208,17 @@ server.addTool({
 
       // 3. Call Gemini API
       log.info('Calling Gemini API', { model: args.model, output_resolution: args.output_resolution });
+      // sourceResolution: 必ず渡す（未指定時は自動決定）
+      let sourceResolution: import('./utils/gemini-client.js').SourceResolution | undefined = args.output_resolution as import('./utils/gemini-client.js').SourceResolution;
+      if (!sourceResolution) {
+        const { selectSourceResolutionSmart } = await import('./utils/gemini-client.js');
+        sourceResolution = selectSourceResolutionSmart(args.outputWidth, args.outputHeight, aspectRatio);
+        log.info('Auto-selected sourceResolution', { sourceResolution });
+      }
       const rawImageBuffer = await generateWithGemini({
         prompt: args.prompt,
         modelTier: args.model,
-        sourceResolution: args.output_resolution,
+        sourceResolution,
         aspectRatio,
         transparent: args.transparent && (args.output_format === 'png' || args.output_format === 'webp'),
         transparentColor: args.transparentColor,

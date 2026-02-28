@@ -1,3 +1,4 @@
+
 import fs from 'fs/promises';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
@@ -8,6 +9,32 @@ import { fallbackDir, outputDir } from './helpers/paths.js';
 const hasApiKey = Boolean(process.env.GEMINI_API_KEY);
 const unwritablePath = process.env.MCP_TEST_UNWRITABLE_PATH;
 const hasFallbackPath = Boolean(unwritablePath && path.isAbsolute(unwritablePath));
+
+describe('mcp-alphabanana full', () => {
+  let handle: Awaited<ReturnType<typeof createMcpClient>> | null = null;
+  let connectionError: Error | null = null;
+
+  beforeAll(async () => {
+    await fs.mkdir(outputDir, { recursive: true });
+    await fs.mkdir(fallbackDir, { recursive: true });
+    try {
+      handle = await createMcpClient(20000); // 20 second timeout
+    } catch (error) {
+      connectionError = error instanceof Error ? error : new Error(String(error));
+      console.error('Failed to connect to MCP server:', connectionError.message);
+    }
+  });
+
+  afterAll(async () => {
+    if (handle) {
+      await closeMcpClient(handle);
+      handle = null;
+    }
+  });
+
+  // ...ここに全テスト（Flash2.5, Pro3, Flash3.1, connection, flash, pro, etc.）をまとめて記述...
+
+});
 
 describe('mcp-alphabanana full', () => {
   let handle: Awaited<ReturnType<typeof createMcpClient>> | null = null;

@@ -45,31 +45,33 @@ describe('mcp-alphabanana sanity', () => {
     expect(generateTool?.name).toBe('generate_image');
   });
 
-  test.runIf(hasApiKey)('generate_image returns a file', async () => {
-    if (!handle) throw new Error('MCP client not initialized');
 
+  test.runIf(hasApiKey)('Flash3.1 minimal image generation', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
     const result = await handle.client.callTool({
       name: 'generate_image',
       arguments: {
         prompt: 'A simple flat blue circle on a white background.',
-        modelTier: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'sanity_icon',
         outputType: 'file',
         outputWidth: 32,
         outputHeight: 32,
-        outputFormat: 'png',
+        output_format: 'png',
         outputPath: outputDir,
         transparent: false,
       },
     });
-
     const parsed = parseToolResult(result);
+    if (!parsed.success) {
+      // 失敗時は詳細を必ず出力
+      console.log('Test failed. Parsed result:', parsed);
+    }
     expect(parsed.success).toBe(true);
-    expect(parsed.format).toBe('png');
+    expect(parsed.mimeType || parsed.format).toBe('image/png');
     expect(parsed.width).toBe(32);
     expect(parsed.height).toBe(32);
     expect(parsed.filePath).toBeTruthy();
-
     const stat = await fs.stat(parsed.filePath);
     expect(stat.size).toBeGreaterThan(0);
   });

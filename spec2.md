@@ -54,7 +54,7 @@ export const SUPPORTED_ASPECT_RATIOS = {
   '4:5': 0.8,   '5:4': 1.25,
   '9:16': 0.5625, '16:9': 1.778,
   '21:9': 2.333,
-  // --- Nano Banana 2 で追加された極端な比率 ---
+  // --- Extreme aspect ratio added from Flash 3.1 (Nano Banana 2) ---
   '1:4': 0.25,  '4:1': 4.0,
   '1:8': 0.125, '8:1': 8.0,
 } as const;
@@ -117,7 +117,6 @@ Flash 3.1 supports up to **14 reference images**. The server will automatically 
     model: z.enum(["Flash3.1", "Flash2.5", "Pro3", "flash", "pro"]).default("Flash3.1"),
     output_resolution: z.enum(["0.5K", "1K", "2K", "4K"]).default("1K"),
     output_format: z.enum(["png", "jpg", "webp"]).default("png"),
-    aspect_ratio: z.string().optional(), // e.g., "16:9"
     transparent: z.boolean().default(false),
     grounding_type: z.enum(["none", "text", "image", "both"]).default("none"),
     thinking_mode: z.enum(["minimal", "high"]).default("minimal"),

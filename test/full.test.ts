@@ -32,7 +32,7 @@ describe('mcp-alphabanana full', () => {
     }
   });
 
-  // ...ここに全テスト（Flash2.5, Pro3, Flash3.1, connection, flash, pro, etc.）をまとめて記述...
+  // ...Write all tests here (Flash2.5, Pro3, Flash3.1, connection, flash, pro, etc.)...
 
 });
 

@@ -64,7 +64,7 @@ describe('mcp-alphabanana sanity', () => {
     });
     const parsed = parseToolResult(result);
     if (!parsed.success) {
-      // 失敗時は詳細を必ず出力
+      // Always output details on failure
       console.log('Test failed. Parsed result:', parsed);
     }
     expect(parsed.success).toBe(true);

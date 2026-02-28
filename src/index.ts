@@ -130,7 +130,7 @@ interface GenerateImageOutput {
 // Create FastMCP server
 const server = new FastMCP({
   name: 'mcp-alphabanana',
-  version: '1.0.0',
+  version: '1.3.0',
   instructions: `
     Image asset generation server using Google Gemini AI.
     Supports transparent PNG output, multiple resolutions, and style references.
@@ -208,7 +208,7 @@ server.addTool({
 
       // 3. Call Gemini API
       log.info('Calling Gemini API', { model: args.model, output_resolution: args.output_resolution });
-      // sourceResolution: 必ず渡す（未指定時は自動決定）
+      // sourceResolution: Must be provided (if not specified, it will be determined automatically)
       let sourceResolution: import('./utils/gemini-client.js').SourceResolution | undefined = args.output_resolution as import('./utils/gemini-client.js').SourceResolution;
       if (!sourceResolution) {
         const { selectSourceResolutionSmart } = await import('./utils/gemini-client.js');
@@ -308,11 +308,27 @@ server.addTool({
       }
 
       // 5. Build result
+      // Set correct mimeType for all output types
+      let mimeType: string;
+      switch (args.output_format) {
+        case 'png':
+          mimeType = 'image/png';
+          break;
+        case 'webp':
+          mimeType = 'image/webp';
+          break;
+        case 'jpg':
+        default:
+          mimeType = 'image/jpeg';
+          break;
+      }
+
       const result: GenerateImageOutput = {
         success: true,
         width: args.outputWidth,
         height: args.outputHeight,
         format: args.output_format,
+        mimeType,
         message: `Image generated successfully.${transparencyWarning}`,
       };
 

@@ -27,19 +27,19 @@ export function selectSourceResolutionSmart(width: number, height: number, aspec
     '21:9':   { '0.5K': [792,168],   '1K': [1584,672],    '2K': [3168,1344],  '4K': [6336,2688] },
   };
 
-  // まず両辺が0.5K未満なら0.5K
+  // If both sides are less than or equal to 0.5K, return 0.5K
   const min0_5K = table[aspectRatio]?.['0.5K'];
   if (min0_5K && width <= min0_5K[0] && height <= min0_5K[1]) {
     return '0.5K';
   }
 
-  // 最大値（4K）を超えている場合は4K
+  // If either side exceeds the maximum value (4K), return 4K
   const max4K = table[aspectRatio]?.['4K'];
   if (max4K && (width > max4K[0] || height > max4K[1])) {
     return '4K';
   }
 
-  // 拡大を避ける: 両辺とも理想値以上の最小解像度を選ぶ
+  // To avoid upscaling: select the smallest resolution where both sides are greater than or equal to the ideal value
   for (const res of ['0.5K','1K','2K','4K'] as const) {
     const ideal = table[aspectRatio]?.[res];
     if (!ideal) continue;
@@ -48,7 +48,7 @@ export function selectSourceResolutionSmart(width: number, height: number, aspec
     }
   }
 
-  // どれも満たさない場合は理論上到達しない
+  // Theoretically unreachable: if none of the above conditions are met
   throw new Error('selectSourceResolutionSmart: No valid resolution found for the given size and aspect ratio.');
 }
 /**

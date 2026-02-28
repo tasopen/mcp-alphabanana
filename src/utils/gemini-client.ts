@@ -256,6 +256,16 @@ The background uniformity is critical for post-processing.`;
             return p;
           });
         }
+          // Truncate thoughtSignature if present
+          if (respLog.candidates[0].safetyRatings) {
+            // nothing to do
+          }
+          if (respLog.candidates[0].content && respLog.candidates[0].content.thoughtSignature) {
+            respLog.candidates[0].content.thoughtSignature = truncateBase64(respLog.candidates[0].content.thoughtSignature);
+          }
+          if (respLog.candidates[0].thoughtSignature) {
+            respLog.candidates[0].thoughtSignature = truncateBase64(respLog.candidates[0].thoughtSignature);
+          }
         console.error(JSON.stringify(respLog, null, 2));
       } catch (logErr) {
         console.error('Error stringifying response for log:', logErr);

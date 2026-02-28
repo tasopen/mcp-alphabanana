@@ -13,7 +13,7 @@
 import sharp from 'sharp';
 
 export type ResizeMode = 'crop' | 'stretch' | 'letterbox' | 'contain';
-export type OutputFormat = 'png' | 'jpg';
+export type OutputFormat = 'png' | 'jpg' | 'webp';
 
 export interface PostProcessOptions {
   width: number;
@@ -49,9 +49,9 @@ export async function postProcess(
 ): Promise<Buffer> {
   let image = sharp(inputBuffer);
   let debugInfo: PostProcessDebugInfo = {};
-  
+
   // Step 1: Apply transparency (before resize to prevent bleeding)
-  if (options.transparentColor && options.format === 'png') {
+  if (options.transparentColor && (options.format === 'png' || options.format === 'webp')) {
     const requestedColor = normalizeTransparentColor(options.transparentColor);
     const selection = await selectTransparentColor(
       sharp(inputBuffer),
@@ -72,14 +72,16 @@ export async function postProcess(
       options.fringeMode,
     );
   }
-  
+
   // Step 2: Resize based on mode
-  const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && options.format === 'png');
+  const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && (options.format === 'png' || options.format === 'webp'));
   image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
-  
+
   // Step 3: Output format
   if (options.format === 'png') {
     return image.png().toBuffer();
+  } else if (options.format === 'webp') {
+    return image.webp({ quality: 90 }).toBuffer();
   } else {
     return image.jpeg({ quality: 90 }).toBuffer();
   }
@@ -95,7 +97,7 @@ export async function postProcessWithDebug(
   let image = sharp(inputBuffer);
   let debugInfo: PostProcessDebugInfo = {};
 
-  if (options.transparentColor && options.format === 'png') {
+  if (options.transparentColor && (options.format === 'png' || options.format === 'webp')) {
     const requestedColor = normalizeTransparentColor(options.transparentColor);
     const selection = await selectTransparentColor(
       sharp(inputBuffer),
@@ -117,12 +119,17 @@ export async function postProcessWithDebug(
     );
   }
 
-  const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && options.format === 'png');
+  const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && (options.format === 'png' || options.format === 'webp'));
   image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
 
-  const buffer = options.format === 'png'
-    ? await image.png().toBuffer()
-    : await image.jpeg({ quality: 90 }).toBuffer();
+  let buffer: Buffer;
+  if (options.format === 'png') {
+    buffer = await image.png().toBuffer();
+  } else if (options.format === 'webp') {
+    buffer = await image.webp({ quality: 90 }).toBuffer();
+  } else {
+    buffer = await image.jpeg({ quality: 90 }).toBuffer();
+  }
 
   return { buffer, debugInfo };
 }
@@ -286,16 +293,16 @@ async function applyTransparency(
 ): Promise<sharp.Sharp> {
   // Parse hex color
   const { r: targetR, g: targetG, b: targetB } = parseHexColor(hexColor);
-  
+
   // Get raw pixel data
   const { data, info } = await image
     .ensureAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
-  
+
   const pixels = new Uint8Array(data);
   const { width, height, channels } = info;
-  
+
   // Convert target color to HSV
   const targetHSV = rgbToHsv(targetR, targetG, targetB);
 
@@ -315,19 +322,19 @@ async function applyTransparency(
   if (keyHue >= 270 || keyHue <= 30) despillKind = 'magenta';   // 270-360 or 0-30
   else if (keyHue >= 90 && keyHue <= 150) despillKind = 'green';
   else if (keyHue >= 210 && keyHue <= 270) despillKind = 'blue';
-  
+
   // Process each pixel
   for (let i = 0; i < pixels.length; i += channels) {
     const r = pixels[i];
     const g = pixels[i + 1];
     const b = pixels[i + 2];
-    
+
     // RGB Euclidean distance from target background colour
     const dr = r - targetR;
     const dg = g - targetG;
     const db = b - targetB;
     const rgbDist = Math.sqrt(dr * dr + dg * dg + db * db);
-    
+
     // Check if pixel matches within tolerance → make transparent
     if (rgbDist <= rgbThreshold) {
       pixels[i + 3] = 0;
@@ -416,7 +423,7 @@ async function applyTransparency(
       }
     }
   }
-  
+
   // Create image from colour-keyed + despilled pixel data
   const keyed = sharp(Buffer.from(pixels), {
     raw: { width, height, channels },
@@ -465,7 +472,7 @@ async function applyTransparency(
       let hasTransparentNeighbour = false;
       const neighbours = [
         [x - 1, y - 1], [x, y - 1], [x + 1, y - 1],
-        [x - 1, y],                 [x + 1, y],
+        [x - 1, y], [x + 1, y],
         [x - 1, y + 1], [x, y + 1], [x + 1, y + 1],
       ];
 
@@ -502,11 +509,11 @@ async function applyTransparency(
         switch (despillKind) {
           case 'magenta':
             // Clamp R and B towards local green median to remove magenta spill
-            rgbaPixels[idx]     = Math.max(0, Math.min(255, Math.round(r - forceStrength * Math.max(0, r - medG))));
+            rgbaPixels[idx] = Math.max(0, Math.min(255, Math.round(r - forceStrength * Math.max(0, r - medG))));
             rgbaPixels[idx + 2] = Math.max(0, Math.min(255, Math.round(b - forceStrength * Math.max(0, b - medG))));
             // Conditional median blend (large images only)
             if (medianBlend > 0) {
-              rgbaPixels[idx]     = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
+              rgbaPixels[idx] = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
               rgbaPixels[idx + 1] = Math.round(rgbaPixels[idx + 1] * keepRatio + medG * medianBlend);
               rgbaPixels[idx + 2] = Math.round(rgbaPixels[idx + 2] * keepRatio + medB * medianBlend);
             }
@@ -521,11 +528,11 @@ async function applyTransparency(
             // Also reduce R/B if they were lifted by the desaturated green (grey-green tint)
             if (gExcess > 8) {
               const greyCorrection = forceStrength * gExcess * 0.35;
-              rgbaPixels[idx]     = Math.max(0, Math.min(255, Math.round(r - greyCorrection)));
+              rgbaPixels[idx] = Math.max(0, Math.min(255, Math.round(r - greyCorrection)));
               rgbaPixels[idx + 2] = Math.max(0, Math.min(255, Math.round(b - greyCorrection)));
             }
             if (medianBlend > 0) {
-              rgbaPixels[idx]     = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
+              rgbaPixels[idx] = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
               rgbaPixels[idx + 1] = Math.round(rgbaPixels[idx + 1] * keepRatio + medG * medianBlend);
               rgbaPixels[idx + 2] = Math.round(rgbaPixels[idx + 2] * keepRatio + medB * medianBlend);
             }
@@ -535,7 +542,7 @@ async function applyTransparency(
           case 'blue':
             rgbaPixels[idx + 2] = Math.max(0, Math.min(255, Math.round(b - forceStrength * Math.max(0, b - Math.max(medR, medG)))));
             if (medianBlend > 0) {
-              rgbaPixels[idx]     = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
+              rgbaPixels[idx] = Math.round(rgbaPixels[idx] * keepRatio + medR * medianBlend);
               rgbaPixels[idx + 1] = Math.round(rgbaPixels[idx + 1] * keepRatio + medG * medianBlend);
               rgbaPixels[idx + 2] = Math.round(rgbaPixels[idx + 2] * keepRatio + medB * medianBlend);
             }
@@ -543,7 +550,7 @@ async function applyTransparency(
 
           default: {
             // Generic: move color toward local median by a factor
-            rgbaPixels[idx]     = Math.max(0, Math.min(255, Math.round(r + forceStrength * (medR - r) * 0.6)));
+            rgbaPixels[idx] = Math.max(0, Math.min(255, Math.round(r + forceStrength * (medR - r) * 0.6)));
             rgbaPixels[idx + 1] = Math.max(0, Math.min(255, Math.round(g + forceStrength * (medG - g) * 0.6)));
             rgbaPixels[idx + 2] = Math.max(0, Math.min(255, Math.round(b + forceStrength * (medB - b) * 0.6)));
             break;
@@ -565,7 +572,7 @@ async function applyTransparency(
     const r = rgbaPixels[i], g = rgbaPixels[i + 1], b = rgbaPixels[i + 2];
     switch (despillKind) {
       case 'magenta':
-        rgbaPixels[i]     = Math.max(0, Math.min(255, Math.round(r - spillStrength * Math.max(0, r - g))));
+        rgbaPixels[i] = Math.max(0, Math.min(255, Math.round(r - spillStrength * Math.max(0, r - g))));
         rgbaPixels[i + 2] = Math.max(0, Math.min(255, Math.round(b - spillStrength * Math.max(0, b - g))));
         break;
       case 'green': {
@@ -574,7 +581,7 @@ async function applyTransparency(
         rgbaPixels[i + 1] = Math.max(0, Math.min(255, Math.round(g - spillStrength * gExcess2)));
         if (gExcess2 > 8) {
           const gc2 = spillStrength * gExcess2 * 0.35;
-          rgbaPixels[i]     = Math.max(0, Math.min(255, Math.round(r - gc2)));
+          rgbaPixels[i] = Math.max(0, Math.min(255, Math.round(r - gc2)));
           rgbaPixels[i + 2] = Math.max(0, Math.min(255, Math.round(b - gc2)));
         }
         break;
@@ -584,7 +591,7 @@ async function applyTransparency(
         break;
       default: {
         const grey = Math.round((r + g + b) / 3);
-        rgbaPixels[i]     = Math.max(0, Math.min(255, Math.round(r + spillStrength * (grey - r) * 0.6)));
+        rgbaPixels[i] = Math.max(0, Math.min(255, Math.round(r + spillStrength * (grey - r) * 0.6)));
         rgbaPixels[i + 1] = Math.max(0, Math.min(255, Math.round(g + spillStrength * (grey - g) * 0.6)));
         rgbaPixels[i + 2] = Math.max(0, Math.min(255, Math.round(b + spillStrength * (grey - b) * 0.6)));
         break;
@@ -670,21 +677,21 @@ function applyResize(
         fit: 'cover',
         position: 'center',
       });
-      
+
     case 'stretch':
       // Distort to exact dimensions
       return image.resize(width, height, {
         kernel,
         fit: 'fill',
       });
-      
+
     case 'letterbox':
       // Fit within dimensions with padding
       return image.resize(width, height, {
         kernel,
         fit: 'contain',
-        background: format === 'png' 
-          ? { r: 0, g: 0, b: 0, alpha: 0 }  // Transparent for PNG
+        background: (format === 'png' || format === 'webp')
+          ? { r: 0, g: 0, b: 0, alpha: 0 }  // Transparent for PNG/WebP
           : { r: 0, g: 0, b: 0, alpha: 1 }, // Black for JPG
       });
 
@@ -703,7 +710,7 @@ function applyResize(
           ? { r: 0, g: 0, b: 0, alpha: 0 }  // Transparent
           : { r: 0, g: 0, b: 0, alpha: 1 }, // Black
       });
-      
+
     default:
       return image.resize(width, height, { kernel, fit: 'cover', position: 'center' });
   }
@@ -715,12 +722,12 @@ function applyResize(
 function parseHexColor(hex: string): { r: number; g: number; b: number } {
   // Remove # if present
   const cleanHex = hex.replace(/^#/, '');
-  
+
   // Handle 3-digit hex
   const fullHex = cleanHex.length === 3
     ? cleanHex.split('').map(c => c + c).join('')
     : cleanHex;
-  
+
   const num = parseInt(fullHex, 16);
   return {
     r: (num >> 16) & 255,
@@ -737,11 +744,11 @@ function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: n
   const rNorm = r / 255;
   const gNorm = g / 255;
   const bNorm = b / 255;
-  
+
   const max = Math.max(rNorm, gNorm, bNorm);
   const min = Math.min(rNorm, gNorm, bNorm);
   const delta = max - min;
-  
+
   // Calculate hue
   let h = 0;
   if (delta !== 0) {
@@ -754,13 +761,13 @@ function rgbToHsv(r: number, g: number, b: number): { h: number; s: number; v: n
     }
   }
   if (h < 0) h += 360;
-  
+
   // Calculate saturation
   const s = max === 0 ? 0 : (delta / max) * 100;
-  
+
   // Calculate value
   const v = max * 100;
-  
+
   return { h, s, v };
 }
 

@@ -90,6 +90,7 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
 | `grounding_type` | enum | `none` | `none`, `text`, `image`, `both` (Flash3.1 only) |
 | `thinking_mode` | enum | `minimal` | `minimal`, `high` (Flash3.1 only) |
 | `include_thoughts` | boolean | `false` | Return model's "thoughts" (Flash3.1 only) |
+| `include_metadata` | boolean | `false` | Include grounding/reasoning metadata in JSON output |
 | `reference_images` | array | `[]` | Up to 14 (Flash3.1/Pro3), 3 (Flash2.5) |
 
 ---
@@ -124,6 +125,24 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
   "include_thoughts": true
 }
 ```
+
+#### Grounding Sample (Search-backed)
+
+```json
+{
+  "prompt": "A modern travel poster featuring today's weather and skyline highlights in Kuala Lumpur",
+  "model": "Flash3.1",
+  "outputFileName": "kl_travel_poster",
+  "outputWidth": 1024,
+  "outputHeight": 1024,
+  "grounding_type": "text",
+  "thinking_mode": "high",
+  "include_metadata": true,
+  "include_thoughts": true
+}
+```
+
+This sample enables Google Search grounding and returns grounding/reasoning metadata in JSON.
 
 #### With Reference Images
 

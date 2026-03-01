@@ -102,6 +102,131 @@ export interface GenerateWithGeminiOptions {
   includeThoughts?: boolean;
 }
 
+export interface GeminiReasoningDetails {
+  mode: ThinkingMode;
+  includeThoughts: boolean;
+  hasThoughtSignature: boolean;
+  hasThoughtText: boolean;
+  thoughtSignature?: string;
+  thoughtText?: string;
+}
+
+export interface GeminiUsageMetadata {
+  promptTokenCount?: number;
+  candidatesTokenCount?: number;
+  totalTokenCount?: number;
+}
+
+export interface GenerateWithGeminiResult {
+  imageBuffer: Buffer;
+  requestedGrounding: GroundingType;
+  effectiveGrounding: GroundingType;
+  groundingMetadata?: unknown;
+  safetyRatings?: unknown[];
+  usageMetadata?: GeminiUsageMetadata;
+  reasoningSummary?: string;
+  reasoning?: GeminiReasoningDetails;
+}
+
+function extractThoughtText(parts: unknown): string | undefined {
+  if (!Array.isArray(parts)) {
+    return undefined;
+  }
+
+  const thoughtTexts: string[] = [];
+  for (const part of parts) {
+    if (!part || typeof part !== 'object') {
+      continue;
+    }
+    const thoughtFlag = (part as any).thought;
+    const text = (part as any).text;
+    if (thoughtFlag === true && typeof text === 'string' && text.trim().length > 0) {
+      thoughtTexts.push(text.trim());
+      continue;
+    }
+    if (typeof thoughtFlag === 'string' && thoughtFlag.trim().length > 0) {
+      thoughtTexts.push(thoughtFlag.trim());
+    }
+  }
+
+  if (thoughtTexts.length === 0) {
+    return undefined;
+  }
+
+  return thoughtTexts.join('\n\n');
+}
+
+function buildReasoningSummary(details: GeminiReasoningDetails): string {
+  const modeLabel = details.mode === 'high' ? 'high thinking' : 'minimal thinking';
+  if (!details.includeThoughts) {
+    return `Reasoning metadata captured with ${modeLabel}; thought text output is disabled.`;
+  }
+
+  if (details.hasThoughtText) {
+    return `Reasoning metadata captured with ${modeLabel}; thought text is included.`;
+  }
+
+  if (details.hasThoughtSignature) {
+    return `Reasoning metadata captured with ${modeLabel}; thought signature is available, but no thought text was returned.`;
+  }
+
+  return `Reasoning metadata captured with ${modeLabel}; no thought fields were returned by Gemini.`;
+}
+
+// Prompts that likely require real-time lookup should opt in to search grounding.
+function inferGroundingTypeFromPrompt(prompt: string): GroundingType {
+  const normalized = prompt.toLowerCase();
+  const searchHints = [
+    'search',
+    'google',
+    'latest',
+    'current',
+    'today',
+    'news',
+    'headline',
+    '最新',
+    '現在',
+    '今日',
+    'ニュース',
+    '検索',
+  ];
+  return searchHints.some((hint) => normalized.includes(hint)) ? 'text' : 'none';
+}
+
+function buildGroundingTools(groundingType: GroundingType): Array<Record<string, unknown>> {
+  if (groundingType === 'none') {
+    return [];
+  }
+
+  if (groundingType === 'text') {
+    return [{ googleSearch: {} }];
+  }
+
+  if (groundingType === 'image') {
+    return [
+      {
+        googleSearch: {
+          searchTypes: {
+            imageSearch: {},
+          },
+        },
+      },
+    ];
+  }
+
+  // both: combine web + image search
+  return [
+    {
+      googleSearch: {
+        searchTypes: {
+          webSearch: {},
+          imageSearch: {},
+        },
+      },
+    },
+  ];
+}
+
 /**
  * Helper to truncate base64 strings for logging.
  * Returns first 12 chars ... last 12 chars.
@@ -112,11 +237,24 @@ function truncateBase64(data: string): string {
 }
 
 /**
+ * Remove sensitive/verbose string fields from log objects.
+ */
+function omitStringField(obj: unknown, key: string): void {
+  if (!obj || typeof obj !== 'object') {
+    return;
+  }
+  const record = obj as Record<string, unknown>;
+  if (typeof record[key] === 'string') {
+    delete record[key];
+  }
+}
+
+/**
  * Generate an image using Gemini API.
  * @param options - Generation options
- * @returns Raw image buffer from Gemini
+ * @returns Generated image and response metadata from Gemini
  */
-export async function generateWithGemini(options: GenerateWithGeminiOptions): Promise<Buffer> {
+export async function generateWithGemini(options: GenerateWithGeminiOptions): Promise<GenerateWithGeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY environment variable is not set');
@@ -196,14 +334,29 @@ The background uniformity is critical for post-processing.`;
   };
 
   const isGemini3 = model.includes('gemini-3');
+  const requestedGrounding: GroundingType = options.groundingType ?? 'none';
+  const effectiveGrounding: GroundingType = requestedGrounding !== 'none'
+    ? requestedGrounding
+    : inferGroundingTypeFromPrompt(options.prompt);
 
   // Thinking
   if (isGemini3) {
     if (options.thinkingMode === 'high') {
       (generationConfig as any).thinkingConfig = {
         thinkingBudget: 1024,
+        includeThoughts: options.includeThoughts ?? false,
+      };
+    } else if (options.includeThoughts) {
+      // Keep minimal budget but request thought fields when explicitly requested.
+      (generationConfig as any).thinkingConfig = {
+        includeThoughts: true,
       };
     }
+  }
+
+  // Grounding must be configured under request.config.tools.
+  if (isGemini3 && effectiveGrounding !== 'none') {
+    (generationConfig as any).tools = buildGroundingTools(effectiveGrounding);
   }
 
   const reqObj: any = {
@@ -212,20 +365,13 @@ The background uniformity is critical for post-processing.`;
     config: generationConfig,
   };
 
-  // Grounding
-  if (isGemini3 && options.groundingType && options.groundingType !== 'none') {
-    reqObj.tools = [];
-    if (options.groundingType === 'text' || options.groundingType === 'both') {
-      reqObj.tools.push({ googleSearch: {} });
-    }
-  }
-
   // Generate content
   console.error('--- GEMINI API REQUEST ---');
   console.error(JSON.stringify({
     model,
     generationConfig,
-    grounding: options.groundingType,
+    requestedGrounding,
+    effectiveGrounding,
     parts: parts.map(p => {
       if ('inlineData' in p && p.inlineData) {
         return {
@@ -253,19 +399,13 @@ The background uniformity is critical for post-processing.`;
             if (p.inlineData && p.inlineData.data) {
               p.inlineData.data = truncateBase64(p.inlineData.data);
             }
+            omitStringField(p, 'thoughtSignature');
             return p;
           });
         }
-          // Truncate thoughtSignature if present
-          if (respLog.candidates[0].safetyRatings) {
-            // nothing to do
-          }
-          if (respLog.candidates[0].content && respLog.candidates[0].content.thoughtSignature) {
-            respLog.candidates[0].content.thoughtSignature = truncateBase64(respLog.candidates[0].content.thoughtSignature);
-          }
-          if (respLog.candidates[0].thoughtSignature) {
-            respLog.candidates[0].thoughtSignature = truncateBase64(respLog.candidates[0].thoughtSignature);
-          }
+        // Omit thoughtSignature fields at known candidate/content levels.
+        omitStringField(respLog.candidates[0], 'thoughtSignature');
+        omitStringField(respLog.candidates[0].content, 'thoughtSignature');
         console.error(JSON.stringify(respLog, null, 2));
       } catch (logErr) {
         console.error('Error stringifying response for log:', logErr);
@@ -291,13 +431,41 @@ The background uniformity is critical for post-processing.`;
 
   if (response && response.candidates && response.candidates.length > 0) {
     const candidates = response.candidates;
-    const content = candidates[0].content;
+    const firstCandidate = candidates[0] as any;
+    const content = firstCandidate?.content;
     if (content && content.parts) {
       // Find the image part
       for (const part of content.parts) {
         if (part.inlineData && part.inlineData.data) {
           const base64Data = part.inlineData.data;
-          return Buffer.from(base64Data, 'base64');
+          const thoughtSignature = typeof content?.thoughtSignature === 'string'
+            ? content.thoughtSignature
+            : (typeof firstCandidate?.thoughtSignature === 'string' ? firstCandidate.thoughtSignature : undefined);
+          const thoughtText = options.includeThoughts ? extractThoughtText(content.parts) : undefined;
+          const reasoning: GeminiReasoningDetails = {
+            mode: options.thinkingMode ?? 'minimal',
+            includeThoughts: options.includeThoughts ?? false,
+            hasThoughtSignature: Boolean(thoughtSignature),
+            hasThoughtText: Boolean(thoughtText),
+            thoughtText,
+          };
+
+          return {
+            imageBuffer: Buffer.from(base64Data, 'base64'),
+            requestedGrounding,
+            effectiveGrounding,
+            groundingMetadata: firstCandidate?.groundingMetadata,
+            safetyRatings: Array.isArray(firstCandidate?.safetyRatings) ? firstCandidate.safetyRatings : undefined,
+            usageMetadata: response?.usageMetadata
+              ? {
+                  promptTokenCount: response.usageMetadata.promptTokenCount,
+                  candidatesTokenCount: response.usageMetadata.candidatesTokenCount,
+                  totalTokenCount: response.usageMetadata.totalTokenCount,
+                }
+              : undefined,
+            reasoningSummary: buildReasoningSummary(reasoning),
+            reasoning,
+          };
         } else {
           console.error(`Found non-image part in response: ${Object.keys(part).join(', ')}`);
           if (part.text) {

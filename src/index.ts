@@ -16,7 +16,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 import { selectAspectRatio } from './utils/aspect-ratio.js';
-import { generateWithGemini, type ReferenceImage } from './utils/gemini-client.js';
+import {
+  generateWithGemini,
+  type GroundingType,
+  type GeminiReasoningDetails,
+  type GeminiUsageMetadata,
+  type ReferenceImage,
+} from './utils/gemini-client.js';
 import { postProcess, postProcessWithDebug, saveDebugImage } from './utils/post-processor.js';
 
 // Supported image extensions and their MIME types
@@ -100,7 +106,9 @@ const GenerateImageParams = z.object({
   thinking_mode: z.enum(['minimal', 'high']).default('minimal')
     .describe('Thinking mode (3.1 only)'),
   include_thoughts: z.boolean().default(false)
-    .describe('Include thoughts in output metadata (3.1 only)'),
+    .describe('Optional (default: false). Request thought fields from Gemini (3.1 only). Thought content is returned in MCP response only when include_metadata=true.'),
+  include_metadata: z.boolean().default(false)
+    .describe('Include grounding and reasoning metadata in JSON output (optional, may increase payload size).'),
 
   // Reference images
   referenceImages: z.array(z.object({
@@ -111,6 +119,25 @@ const GenerateImageParams = z.object({
   // Debug
   debug: z.boolean().default(false)
     .describe('Debug mode: output intermediate processing images and prompt'),
+}).superRefine((args, ctx) => {
+  const needsOutputPath = args.outputType === 'file' || args.outputType === 'combine';
+
+  if (needsOutputPath && !args.outputPath) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['outputPath'],
+      message: 'outputPath is required when outputType is "file" or "combine"',
+    });
+    return;
+  }
+
+  if (needsOutputPath && args.outputPath && !path.isAbsolute(args.outputPath)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['outputPath'],
+      message: 'outputPath must be an absolute path when outputType is "file" or "combine"',
+    });
+  }
 });
 
 // Output interface
@@ -125,12 +152,21 @@ interface GenerateImageOutput {
   message: string;
   warning?: string;
   debugPrompt?: string;
+  metadata?: {
+    requestedGrounding: GroundingType;
+    effectiveGrounding: GroundingType;
+    grounding?: unknown;
+    reasoningSummary?: string;
+    reasoning?: GeminiReasoningDetails;
+    safetyRatings?: unknown[];
+    usage?: GeminiUsageMetadata;
+  };
 }
 
 // Create FastMCP server
 const server = new FastMCP({
   name: 'mcp-alphabanana',
-  version: '1.3.0',
+  version: '1.3.2',
   instructions: `
     Image asset generation server using Google Gemini AI.
     Supports transparent PNG output, multiple resolutions, and style references.
@@ -215,7 +251,7 @@ server.addTool({
         sourceResolution = selectSourceResolutionSmart(args.outputWidth, args.outputHeight, aspectRatio);
         log.info('Auto-selected sourceResolution', { sourceResolution });
       }
-      const rawImageBuffer = await generateWithGemini({
+      const geminiResult = await generateWithGemini({
         prompt: args.prompt,
         modelTier: args.model,
         sourceResolution,
@@ -227,6 +263,7 @@ server.addTool({
         thinkingMode: args.thinking_mode,
         includeThoughts: args.include_thoughts,
       });
+      const rawImageBuffer = geminiResult.imageBuffer;
 
       // Debug: save raw Gemini output (requires absolute outputPath when writing debug files)
       if (args.debug) {
@@ -335,6 +372,18 @@ server.addTool({
       // Debug: include prompt
       if (args.debug) {
         result.debugPrompt = args.prompt;
+      }
+
+      if (args.include_metadata) {
+        result.metadata = {
+          requestedGrounding: geminiResult.requestedGrounding,
+          effectiveGrounding: geminiResult.effectiveGrounding,
+          grounding: geminiResult.groundingMetadata,
+          reasoningSummary: geminiResult.reasoningSummary,
+          reasoning: geminiResult.reasoning,
+          safetyRatings: geminiResult.safetyRatings,
+          usage: geminiResult.usageMetadata,
+        };
       }
 
       // Save file (when outputType is 'file' or 'combine')

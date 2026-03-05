@@ -7,9 +7,9 @@ A Model Context Protocol (MCP) server for generating image assets using Google G
 Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified codebase and flexible output options.
 ## Why alphabanana?
 
---**Zero Watermarks:** API-native clean images.  
---**Thinking/Grounding Support:** Higher prompt adherence and search-backed accuracy.  
---**Production Ready:** Supports transparent WebP and exact aspect ratios for web/game assets.  
+- **Zero Watermarks:** API-native clean images.  
+- **Thinking/Grounding Support:** Higher prompt adherence and search-backed accuracy.  
+- **Production Ready:** Supports transparent WebP and exact aspect ratios for web/game assets.  
 
 ## Features
 

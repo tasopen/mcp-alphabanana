@@ -1,7 +1,7 @@
 # mcp-alphabanana
 
-English | [日本語](README.ja.md)
-![alphananana on the move](./alphananana-onthemove.png)
+English | [日本語](README.ja.md)  
+![alphananana on the move](./alphananana-onthemove.png)  
 A Model Context Protocol (MCP) server for generating image assets using Google Gemini AI (Gemini 3.1 Flash/Nano Banana 2 supported).
 
 Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified codebase and flexible output options.

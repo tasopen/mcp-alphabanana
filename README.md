@@ -5,6 +5,11 @@ English | [日本語](README.ja.md)
 A Model Context Protocol (MCP) server for generating image assets using Google Gemini AI (Gemini 3.1 Flash/Nano Banana 2 supported).
 
 Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified codebase and flexible output options.
+
+<a href="https://glama.ai/mcp/servers/@tasopen/mcp-alphabanana">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@tasopen/mcp-alphabanana/badge" alt="mcp-alphabanana MCP server" />
+</a>
+
 ## Why alphabanana?
 
 - **Zero Watermarks:** API-native clean images.  
@@ -195,4 +200,3 @@ npm run build
 ## License
 
 MIT
-

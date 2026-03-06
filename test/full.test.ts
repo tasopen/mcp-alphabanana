@@ -2,7 +2,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { closeMcpClient, createMcpClient, parseToolResult } from './helpers/mcp-client.js';
+import { callToolAndParse, closeMcpClient, createMcpClient } from './helpers/mcp-client.js';
 import { ensureReferenceImage } from './helpers/fixtures.js';
 import { fallbackDir, outputDir } from './helpers/paths.js';
 
@@ -80,7 +80,7 @@ describe('mcp-alphabanana full', () => {
   test.runIf(hasApiKey)('base64-only output returns inline data', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A flat red square icon with a white border.',
@@ -92,9 +92,11 @@ describe('mcp-alphabanana full', () => {
         output_format: 'png',
         transparent: false,
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: base64-only output returns inline data',
+    });
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
@@ -104,7 +106,7 @@ describe('mcp-alphabanana full', () => {
   test.runIf(hasApiKey)('combine output returns file and base64', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A minimal green triangle with a simple outline.',
@@ -117,9 +119,11 @@ describe('mcp-alphabanana full', () => {
         outputPath: outputDir,
         transparent: false,
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: combine output returns file and base64',
+    });
     expect(parsed.success).toBe(true);
     expect(parsed.filePath).toBeTruthy();
     expect(parsed.base64).toBeTruthy();
@@ -132,7 +136,7 @@ describe('mcp-alphabanana full', () => {
   test.runIf(hasApiKey)('jpg transparency adds warning', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple yellow star with a solid background.',
@@ -144,9 +148,11 @@ describe('mcp-alphabanana full', () => {
         output_format: 'jpg',
         transparent: true,
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: jpg transparency adds warning',
+    });
     expect(parsed.success).toBe(true);
     expect(parsed.message).toContain('Transparency is ignored for JPG output');
   });
@@ -154,7 +160,7 @@ describe('mcp-alphabanana full', () => {
   test.runIf(hasApiKey)('pro 4K source generates output', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple mountain silhouette with a gradient sky.',
@@ -167,12 +173,11 @@ describe('mcp-alphabanana full', () => {
         output_format: 'png',
         transparent: false,
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
-    if (!parsed.success) {
-      console.error('Pro 4K test failed:', parsed.message);
-    }
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: pro 4K source generates output',
+    });
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
@@ -181,7 +186,7 @@ describe('mcp-alphabanana full', () => {
   test.runIf(hasApiKey)('relative outputPath returns an error', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A placeholder icon for validation.',
@@ -193,9 +198,11 @@ describe('mcp-alphabanana full', () => {
         output_format: 'png',
         outputPath: '.\\relative',
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: relative outputPath returns an error',
+    });
     expect(parsed.success).toBe(false);
     expect(parsed.message).toContain('outputPath must be an absolute path');
   });
@@ -205,7 +212,7 @@ describe('mcp-alphabanana full', () => {
 
     const referencePath = await ensureReferenceImage();
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'Match the style of the reference image.',
@@ -222,19 +229,18 @@ describe('mcp-alphabanana full', () => {
           },
         ],
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
-    if (!parsed.success) {
-      console.error('Reference image test failed:', parsed.message);
-    }
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: reference image paths are accepted',
+    });
     expect(parsed.success).toBe(true);
   });
 
   test.runIf(Boolean(hasFallbackPath && hasApiKey))('fallback write path is used on failure', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A gray circle used for fallback testing.',
@@ -247,9 +253,11 @@ describe('mcp-alphabanana full', () => {
         outputPath: unwritablePath,
         transparent: false,
       },
-    });
+    };
 
-    const parsed = parseToolResult(result);
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: fallback write path is used on failure',
+    });
     expect(parsed.success).toBe(true);
     expect(parsed.warning).toContain('Requested path not writable');
     expect(parsed.filePath).toContain('fallback');

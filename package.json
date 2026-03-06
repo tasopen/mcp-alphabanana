@@ -11,6 +11,7 @@
     "dist/",
     "README.md",
     "README.ja.md",
+    "alphananana-onthemove.png",
     "LICENSE"
   ],
   "scripts": {

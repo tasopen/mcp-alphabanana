@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { closeMcpClient, createMcpClient, parseToolResult } from './helpers/mcp-client.js';
+import { callToolAndParse, closeMcpClient, createMcpClient } from './helpers/mcp-client.js';
 import { outputDir } from './helpers/paths.js';
 
 const hasApiKey = Boolean(process.env.GEMINI_API_KEY);
@@ -48,10 +48,10 @@ describe('mcp-alphabanana sanity', () => {
 
   test.runIf(hasApiKey)('Flash3.1 minimal image generation', async () => {
     if (!handle) throw new Error('MCP client not initialized');
-    const result = await handle.client.callTool({
+    const request = {
       name: 'generate_image',
       arguments: {
-        prompt: 'A simple flat blue circle on a white background.',
+        prompt: 'A tiny pixel art red apple game icon with a single green leaf, centered on a plain light gray background.',
         model: 'Flash3.1',
         outputFileName: 'sanity_icon',
         outputType: 'file',
@@ -61,12 +61,10 @@ describe('mcp-alphabanana sanity', () => {
         outputPath: outputDir,
         transparent: false,
       },
+    };
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'sanity: Flash3.1 minimal image generation',
     });
-    const parsed = parseToolResult(result);
-    if (!parsed.success) {
-      // Always output details on failure
-      console.log('Test failed. Parsed result:', parsed);
-    }
     expect(parsed.success).toBe(true);
     expect(parsed.mimeType || parsed.format).toBe('image/png');
     expect(parsed.width).toBe(32);

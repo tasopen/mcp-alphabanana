@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-sanity:
+    name: Build and sanity (${{ matrix.os }})
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run sanity test without external API
+        run: npm test
+        env:
+          GEMINI_API_KEY: ''
+
+  api-smoke:
+    name: API smoke (${{ matrix.os }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Check secret availability
+        id: gemini-key
+        shell: pwsh
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+            "present=false" >> $env:GITHUB_OUTPUT
+            Write-Host 'GEMINI_API_KEY is not configured. Skipping API smoke test.'
+          } else {
+            "present=true" >> $env:GITHUB_OUTPUT
+          }
+        env:
+          GEMINI_API_KEY: ${{ secrets['GEMINI_API_KEY'] }}
+
+      - name: Run image generation smoke test
+        if: steps.gemini-key.outputs.present == 'true'
+        run: npm test
+        env:
+          GEMINI_API_KEY: ${{ secrets['GEMINI_API_KEY'] }}

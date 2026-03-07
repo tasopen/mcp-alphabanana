@@ -1,7 +1,10 @@
 # Changelog
 
+## 1.3.5 (2026-03-11)
+- Bump package version to 1.3.5
+- Update README header image to animated GIF
 
-## 1.3.5 (2026-03-07)
+## 1.3.4 (2026-03-07)
 
 - Added cross-platform GitHub Actions CI for Ubuntu, macOS, and Windows.
 - Added workflow-dispatch API smoke tests using `GEMINI_API_KEY` when configured.

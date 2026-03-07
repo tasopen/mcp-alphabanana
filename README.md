@@ -1,10 +1,15 @@
 # mcp-alphabanana
 
 English | [日本語](README.ja.md)  
-![alphabanana-image](./alphabanana.gif)  
+![alphabanana-image](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/alphabanana.gif)  
 A Model Context Protocol (MCP) server for generating image assets using Google Gemini AI (Gemini 3.1 Flash/Nano Banana 2 supported).
 
 Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified codebase and flexible output options.
+## Why alphabanana?
+
+- **Zero Watermarks:** API-native clean images.  
+- **Thinking/Grounding Support:** Higher prompt adherence and search-backed accuracy.  
+- **Production Ready:** Supports transparent WebP and exact aspect ratios for web/game assets.  
 
 ## Features
 

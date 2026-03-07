@@ -1,7 +1,7 @@
 # mcp-alphabanana
 
 [English](README.md) | 日本語  
-![alphananana on the move](./alphananana-onthemove.png)  
+![alphabanana-image](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/alphabanana.gif)  
 Google Gemini AI（Gemini 3.1 Flash / Nano Banana 2 対応）で画像アセットを生成する Model Context Protocol (MCP) サーバーです。
 
 [FastMCP 3](https://www.npmjs.com/package/fastmcp) で構築されており、シンプルなコードベースと柔軟な出力オプションを提供します。

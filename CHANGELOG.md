@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.3.5 (2026-03-11)
+- Bump package version to 1.3.5
+- Update README header image to animated GIF
+
+## 1.3.4 (2026-03-07)
+
+- Added cross-platform GitHub Actions CI for Ubuntu, macOS, and Windows.
+- Added workflow-dispatch API smoke tests using `GEMINI_API_KEY` when configured.
+- Improved MCP test diagnostics for tool-call, parse, and API failure cases.
+- Updated the sanity smoke prompt for more stable image generation.
+- Included the README image asset in the published npm package.
 
 
 ## 1.3.0 (2026-02-28)

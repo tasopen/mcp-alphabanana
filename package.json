@@ -11,6 +11,7 @@
     "dist/",
     "README.md",
     "README.ja.md",
+    "examples/",
     "alphabanana.gif",
     "LICENSE"
   ],
@@ -29,12 +30,26 @@
   },
   "keywords": [
     "mcp",
+    "mcp-server",
+    "model-context-protocol",
     "gemini",
+    "google-gemini",
     "image-generation",
+    "ai-image-generation",
+    "transparent-png",
+    "reference-images",
     "fastmcp"
   ],
-  "author": "",
+  "author": "tasopen",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tasopen/mcp-alphabanana.git"
+  },
+  "homepage": "https://github.com/tasopen/mcp-alphabanana#readme",
+  "bugs": {
+    "url": "https://github.com/tasopen/mcp-alphabanana/issues"
+  },
   "dependencies": {
     "@google/genai": "^1.0.0",
     "fastmcp": "^3.31.0",

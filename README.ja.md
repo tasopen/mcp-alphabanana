@@ -55,8 +55,12 @@ npx -y @tasopen/mcp-alphabanana
 - VS Code MCP
 - Cursor
 
-[FastMCP 3](https://www.npmjs.com/package/fastmcp) を使ってシンプルなコードベースと柔軟な出力オプションを実現しています。
+[FastMCP 3](https://www.npmjs.com/package/fastmcp) を使ってシンプルなコードベースと柔軟な出力オプションを実現しています。  
 
+Glama MCP Server badge:
+<a href="https://glama.ai/mcp/servers/tasopen/mcp-alphabanana">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/tasopen/mcp-alphabanana/badge" />
+</a>
 ## 利用可能なツール
 
 ### generate_image

@@ -57,6 +57,11 @@ It can be used with MCP-compatible clients such as:
 
 Built with [FastMCP 3](https://www.npmjs.com/package/fastmcp) for a simplified codebase and flexible output options.
 
+Glama MCP Server badge:
+<a href="https://glama.ai/mcp/servers/tasopen/mcp-alphabanana">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/tasopen/mcp-alphabanana/badge" />
+</a>
+
 ## Available Tools
 
 ### generate_image

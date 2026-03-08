@@ -1,6 +1,12 @@
 # Changelog
 
-## 1.3.5 (2026-03-11)
+## 1.3.6 (2026-03-08)
+- Read the FastMCP server version from `package.json` instead of hardcoding it in `src/index.ts`.
+- Add `Dockerfile`, `glama.json`, and GitHub release workflow files for Glama inspection and GitHub Releases.
+- Extend the release workflow to publish to npm via GitHub Actions OIDC trusted publishing.
+- Refresh README content for Glama-oriented publishing and Japanese documentation alignment.
+
+## 1.3.5 (2026-03-07)
 - Bump package version to 1.3.5
 - Update README header image to animated GIF
 

@@ -1,11 +1,11 @@
 {
   "name": "@tasopen/mcp-alphabanana",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "MCP server for image generation using Google Gemini AI",
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "mcp-alphabanana": "./dist/index.js"
+    "mcp-alphabanana": "dist/index.js"
   },
   "files": [
     "dist/",
@@ -44,7 +44,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tasopen/mcp-alphabanana.git"
+    "url": "git+https://github.com/tasopen/mcp-alphabanana.git"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "homepage": "https://github.com/tasopen/mcp-alphabanana#readme",
   "bugs": {

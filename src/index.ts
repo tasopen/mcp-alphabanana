@@ -14,6 +14,12 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const PACKAGE_VERSION = JSON.parse(
+  fsSync.readFileSync(path.resolve(__dirname, '../package.json'), 'utf8')
+) as { version?: string };
+const SERVER_VERSION = /^\d+\.\d+\.\d+$/.test(PACKAGE_VERSION.version ?? '')
+  ? (PACKAGE_VERSION.version as `${number}.${number}.${number}`)
+  : '0.0.0';
 
 import { selectAspectRatio } from './utils/aspect-ratio.js';
 import {
@@ -166,7 +172,7 @@ interface GenerateImageOutput {
 // Create FastMCP server
 const server = new FastMCP({
   name: 'mcp-alphabanana',
-  version: '1.3.2',
+  version: SERVER_VERSION,
   instructions: `
     Image asset generation server using Google Gemini AI.
     Supports transparent PNG output, multiple resolutions, and style references.

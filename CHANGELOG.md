@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.1 (2026-03-22)
+- Improve Windows reliability for `.mcpb` installs by bundling platform-specific optional `sharp` runtime packages instead of depending on postinstall hooks.
+- Improve Claude Desktop usability by steering larger image generations toward `outputType=file` and documenting FileSystem-assisted absolute paths on Windows.
+
 ## 1.4.0 (2026-03-22)
 - Add `noresize=true` native-size output mode so callers can specify `aspectRatio` plus `output_resolution` without also providing pixel dimensions.
 - Update README image references to the new `images/` layout, including demo and sample output assets.

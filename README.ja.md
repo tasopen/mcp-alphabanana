@@ -57,6 +57,8 @@ https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphaban
 
 Claude registry / MCPB 向けメタデータは `manifest.json` に定義しており、512x512 の静的アイコンとして `images/mcp-alphabanana.png` を同梱しています。
 
+各プラットフォーム向けの `sharp` ネイティブランタイムは optional dependencies として宣言してあり、`.mcpb` インストール時に postinstall フックへ依存せず適切な事前ビルド済みバイナリを解決できるようにしています。
+
 - Stable MCPB URL: `https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb`
 - 版付き MCPB URL パターン: `https://github.com/tasopen/mcp-alphabanana/releases/download/vVERSION/mcp-alphabanana-VERSION.mcpb`
 - サポート: [GitHub Issues](https://github.com/tasopen/mcp-alphabanana/issues)
@@ -82,6 +84,8 @@ Glama MCP Server badge:
 ### generate_image
 
 透過処理・ローカル参照画像・Grounding・Reasoning メタデータを任意で指定しながら、Google Gemini で画像を生成します。
+
+Claude Desktop では、中〜大きめの画像は `outputType=file` を優先してください。`base64` や `combine` は Claude のコンテキストを消費するため、クライアント側のサイズ上限に達しやすくなります。Windows では FileSystem 拡張を使って、書き込み可能な絶対 `outputPath` とローカル `referenceImages` のパスを選ばせるのが安全です。
 
 主なパラメータ:
 

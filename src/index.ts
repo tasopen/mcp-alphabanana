@@ -75,7 +75,7 @@ const GenerateImageParams = z.object({
   // Output format
   outputType: z.enum(['file', 'base64', 'combine'])
     .default('combine')
-    .describe('Output format: file=file only, base64=base64 only, combine=both'),
+    .describe('Output format: file=file only, base64=base64 only, combine=both. In Claude Desktop, prefer file for medium or large images to avoid context-size limits; use base64 only for small previews.'),
 
   // Model settings (REQUIRED - affects cost and capabilities)
     // See tool description for model details. 'flash' and 'pro' are aliases for Flash2.5 and Pro3, kept for compatibility.
@@ -99,7 +99,7 @@ const GenerateImageParams = z.object({
   output_format: z.enum(['png', 'jpg', 'webp']).default('png')
     .describe('Output format'),
   outputPath: z.string().optional()
-    .describe('Output directory path (MUST be an absolute path when outputType is file or combine)'),
+    .describe('Output directory path (MUST be an absolute path when outputType is file or combine). In Claude Desktop on Windows, use the FileSystem extension to choose or prepare a writable absolute path such as C:\\temp.'),
 
   // Transparency processing
   transparent: z.boolean().default(false)
@@ -131,7 +131,7 @@ const GenerateImageParams = z.object({
   // Reference images
   referenceImages: z.array(z.object({
     description: z.string().optional(),
-    filePath: z.string().describe('Absolute path to reference image file (.png, .jpg, .jpeg, .webp)'),
+    filePath: z.string().describe('Absolute path to reference image file (.png, .jpg, .jpeg, .webp). In Claude Desktop on Windows, use the FileSystem extension to locate the file and pass its Windows absolute path.'),
   })).max(14).default([]).describe('Reference images for style guidance (Flash2.5: max 3, others: max 14)'),
 
   // Debug
@@ -224,6 +224,8 @@ const server = new FastMCP({
     Image asset generation server using Google Gemini AI.
     Supports transparent PNG output, multiple resolutions, and style references.
     Use outputType to control whether results are returned as files, base64, or both.
+    In Claude Desktop, prefer outputType=file for medium or large images because base64/combine responses can exceed the client's context budget.
+    In Claude Desktop on Windows, use the FileSystem extension to choose readable reference-image paths and writable output directories.
     Preserve user prompts as-is. Do not summarize or translate; only add transparency-related hints when needed.
   `,
 });
@@ -231,7 +233,7 @@ const server = new FastMCP({
 // Register the generate_image tool
 server.addTool({
   name: 'generate_image',
-  description: `Generate image assets using Gemini AI with optional transparency and reference images.\n\n[Model Guidance]\n- Flash3.1 (recommended): High quality, very fast, supports grounding and advanced features.\n- Pro3: Higher fidelity, but more costly and slower.\n- Flash2.5: Legacy, maintained for compatibility. Does not support 0.5K, 2K, or 4K resolutions.\n\n[Aspect Ratios]\nGemini supports the following aspect ratios (model-dependent):\n- Common to all models: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9\n- Flash3.1 only: 1:4, 4:1, 1:8, 8:1\n\nNormal mode: provide outputWidth/outputHeight and the server will choose the closest Gemini aspect ratio and source resolution, then resize to the requested pixel size.\nNo-resize mode: set noresize=true and provide aspectRatio plus output_resolution. The server will return Gemini's native pixel dimensions for that combination without post-generation resizing.\n\nIf you intentionally want to control resizing/cropping in normal mode, use the 'resizeMode' parameter: 'crop' (default, center crop), 'letterbox' (fit with padding), 'contain' (trim transparent margins then fit), or 'stretch' (distort to fit).\n\n[IMPORTANT]\nAlways preserve the user's prompt as-is, including language and nuance. Do not translate or summarize.`,
+  description: `Generate image assets using Gemini AI with optional transparency and reference images.\n\n[Claude Desktop Guidance]\n- Prefer outputType='file' for medium or large images. base64 and combine responses can exceed Claude Desktop's context limit.\n- On Claude Desktop for Windows, use the FileSystem extension to choose reference-image paths and a writable absolute outputPath before calling this tool.\n- Use base64 only for small previews or when the client explicitly needs inline image data.\n\n[Model Guidance]\n- Flash3.1 (recommended): High quality, very fast, supports grounding and advanced features.\n- Pro3: Higher fidelity, but more costly and slower.\n- Flash2.5: Legacy, maintained for compatibility. Does not support 0.5K, 2K, or 4K resolutions.\n\n[Aspect Ratios]\nGemini supports the following aspect ratios (model-dependent):\n- Common to all models: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9\n- Flash3.1 only: 1:4, 4:1, 1:8, 8:1\n\nNormal mode: provide outputWidth/outputHeight and the server will choose the closest Gemini aspect ratio and source resolution, then resize to the requested pixel size.\nNo-resize mode: set noresize=true and provide aspectRatio plus output_resolution. The server will return Gemini's native pixel dimensions for that combination without post-generation resizing.\n\nIf you intentionally want to control resizing/cropping in normal mode, use the 'resizeMode' parameter: 'crop' (default, center crop), 'letterbox' (fit with padding), 'contain' (trim transparent margins then fit), or 'stretch' (distort to fit).\n\n[IMPORTANT]\nAlways preserve the user's prompt as-is, including language and nuance. Do not translate or summarize.`,
   parameters: GenerateImageParams,
   annotations: {
     title: 'Image Generator',

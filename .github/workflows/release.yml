@@ -102,6 +102,14 @@ jobs:
       - name: Pack npm artifact
         run: npm pack
 
+      - name: Install all sharp platform binaries for cross-platform MCPB
+        run: |
+          npm install --no-save \
+            @img/sharp-win32-x64 \
+            @img/sharp-darwin-arm64 \
+            @img/sharp-darwin-x64 \
+            @img/sharp-linux-arm64
+
       - name: Pack MCPB bundle
         shell: bash
         run: |

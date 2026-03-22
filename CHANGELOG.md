@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.4.2 (2026-03-22)
+- Reduce npm package size from 3.6 MB to ~130 KB by excluding image assets from the package and replacing relative image paths in README with GitHub raw URLs.
+- Fix cross-platform `.mcpb` bundle: install all `sharp` platform binaries (`win32-x64`, `darwin-arm64`, `darwin-x64`, `linux-arm64`) before packing in CI so the bundle works on all platforms.
+- Add logo icon to README header.
+
 ## 1.4.1 (2026-03-22)
 - Improve Windows reliability for `.mcpb` installs by bundling platform-specific optional `sharp` runtime packages instead of depending on postinstall hooks.
 - Improve Claude Desktop usability by steering larger image generations toward `outputType=file` and documenting FileSystem-assisted absolute paths on Windows.

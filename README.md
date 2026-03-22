@@ -1,6 +1,6 @@
 # mcp-alphabanana
 
-[![npm version](https://img.shields.io/npm/v/@tasopen/mcp-alphabanana)](https://www.npmjs.com/package/@tasopen/mcp-alphabanana)
+<img src="https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/mcp-alphabanana.png" width="48" alt="mcp-alphabanana logo" /> [![npm version](https://img.shields.io/npm/v/@tasopen/mcp-alphabanana)](https://www.npmjs.com/package/@tasopen/mcp-alphabanana)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 English | [日本語](README.ja.md)
@@ -15,7 +15,7 @@ Key capabilities:
 - Multi-image style guidance with local reference image files
 - Flexible file, base64, or combined outputs for agent workflows
 
-![alphabanana demo](images/alphabanana.gif)
+![alphabanana demo](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/alphabanana.gif)
 
 ## Quick Start
 
@@ -163,7 +163,7 @@ These sample outputs were generated with mcp-alphabanana and stored in [images/e
 
 | Pixel art asset | Reference-image game scene | Photorealistic generation |
 | --- | --- | --- |
-| ![Pixel art treasure chest](images/examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](images/examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](images/examples/photoreal-travel-poster.jpg) |
+| ![Pixel art treasure chest](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/photoreal-travel-poster.jpg) |
 
 ## Configuration
 

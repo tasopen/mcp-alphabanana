@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "@tasopen/mcp-alphabanana",
   "display_name": "mcp-alphabanana",
-  "version": "1.3.6",
+  "version": "1.4.0",
   "description": "MCP server for image generation using Google Gemini AI",
   "long_description": "mcp-alphabanana is an MCP server for generating image assets with Google Gemini. It supports fast image generation, transparent PNG/WebP outputs, reference-image guidance, and file or base64 delivery for agent workflows.",
   "author": {

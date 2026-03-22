@@ -87,7 +87,8 @@ Glama MCP Server badge:
 
 - `prompt` (string): 生成したい画像の説明
 - `model`: `Flash3.1`、`Flash2.5`、`Pro3`、`flash`、`pro`
-- `outputWidth` / `outputHeight`: 出力画像のピクセルサイズ
+- `outputWidth` / `outputHeight`: 通常モードでの出力画像ピクセルサイズ
+- `noresize` + `aspectRatio` + `output_resolution`: リサイズせず Gemini ネイティブサイズを返す
 - `output_resolution`: `0.5K`、`1K`、`2K`、`4K`
 - `output_format`: `png`、`jpg`、`webp`
 - `outputType`: `file`、`base64`、`combine`
@@ -116,9 +117,11 @@ Glama MCP Server badge:
 | `outputFileName` | string | 必須 | 出力ファイル名（拡張子がなければ自動付与） |
 | `outputType` | enum | `combine` | `file`、`base64`、または `combine` |
 | `model` | enum | `Flash3.1` | `Flash3.1` / `Flash2.5` / `Pro3` / `flash` / `pro` |
-| `output_resolution` | enum | auto | `0.5K` / `1K` / `2K` / `4K`（0.5K/2K/4K は Flash3.1 のみ） |
-| `outputWidth` | integer | 必須 | 出力幅（ピクセル） |
-| `outputHeight` | integer | 必須 | 出力高さ（ピクセル） |
+| `output_resolution` | enum | auto | `0.5K` / `1K` / `2K` / `4K`。`noresize=true` の場合は必須 |
+| `noresize` | boolean | `false` | 生成後リサイズを行わず、Gemini ネイティブの寸法を返す |
+| `aspectRatio` | enum | optional | `noresize=true` の場合に必須。例: `1:1`、`16:9`、`4:5` |
+| `outputWidth` | integer | `noresize=true` 以外では必須 | 出力幅（ピクセル） |
+| `outputHeight` | integer | `noresize=true` 以外では必須 | 出力高さ（ピクセル） |
 | `output_format` | enum | `png` | `png` / `jpg` / `webp` |
 | `outputPath` | string | `file` / `combine` 時に必須 | 出力ディレクトリの絶対パス |
 | `transparent` | boolean | `false` | 背景透過（PNG / WebP のみ） |
@@ -220,6 +223,23 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
   "transparent": true
 }
 ```
+
+#### リサイズなしでネイティブサイズを返す
+
+```json
+{
+  "prompt": "バナナのマスコットが入ったフラットなアプリアイコン",
+  "model": "Flash3.1",
+  "outputFileName": "banana-icon-native",
+  "outputType": "base64",
+  "noresize": true,
+  "aspectRatio": "1:1",
+  "output_resolution": "0.5K",
+  "output_format": "png"
+}
+```
+
+このモードでは、指定したアスペクト比と解像度に対応する Gemini ネイティブのピクセルサイズをそのまま返します。たとえば `1:1` + `0.5K` なら `512x512` がリサイズなしで返ります。
 
 #### 応用例（縦型ポスター + Thinking）
 

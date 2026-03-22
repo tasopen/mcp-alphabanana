@@ -1,6 +1,7 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 (2026-03-22)
+- Add `noresize=true` native-size output mode so callers can specify `aspectRatio` plus `output_resolution` without also providing pixel dimensions.
 - Update README image references to the new `images/` layout, including demo and sample output assets.
 - Expand `manifest.json` for MCPB 0.3 metadata, registry-facing links, static icon packaging, screenshots, and Claude-friendly `user_config` for `GEMINI_API_KEY`.
 - Resize the packaged Claude registry icon at `images/mcp-alphabanana.png` to 512x512.

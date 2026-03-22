@@ -32,32 +32,6 @@ describe('mcp-alphabanana full', () => {
     }
   });
 
-  // ...Write all tests here (Flash2.5, Pro3, Flash3.1, connection, flash, pro, etc.)...
-
-});
-
-describe('mcp-alphabanana full', () => {
-  let handle: Awaited<ReturnType<typeof createMcpClient>> | null = null;
-  let connectionError: Error | null = null;
-
-  beforeAll(async () => {
-    await fs.mkdir(outputDir, { recursive: true });
-    await fs.mkdir(fallbackDir, { recursive: true });
-    try {
-      handle = await createMcpClient(20000); // 20 second timeout
-    } catch (error) {
-      connectionError = error instanceof Error ? error : new Error(String(error));
-      console.error('Failed to connect to MCP server:', connectionError.message);
-    }
-  });
-
-  afterAll(async () => {
-    if (handle) {
-      await closeMcpClient(handle);
-      handle = null;
-    }
-  });
-
   test('MCP server connection is established', async () => {
     if (connectionError) {
       console.error('Connection error details:', connectionError);
@@ -200,11 +174,9 @@ describe('mcp-alphabanana full', () => {
       },
     };
 
-    const { parsed } = await callToolAndParse(handle.client, request, {
+    await expect(callToolAndParse(handle.client, request, {
       testName: 'full: relative outputPath returns an error',
-    });
-    expect(parsed.success).toBe(false);
-    expect(parsed.message).toContain('outputPath must be an absolute path');
+    })).rejects.toThrow(/outputPath must be an absolute path/);
   });
 
   test.runIf(hasApiKey)('reference image paths are accepted', async () => {
@@ -215,7 +187,7 @@ describe('mcp-alphabanana full', () => {
     const request = {
       name: 'generate_image',
       arguments: {
-        prompt: 'Match the style of the reference image.',
+        prompt: 'Create an original tiny banana icon using the reference image only as loose inspiration for the blue color palette. Do not reproduce the reference image composition.',
         model: 'flash',
         outputFileName: 'full_reference',
         outputType: 'base64',

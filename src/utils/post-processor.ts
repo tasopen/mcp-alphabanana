@@ -20,6 +20,7 @@ export interface PostProcessOptions {
   height: number;
   format: OutputFormat;
   resizeMode: ResizeMode;
+  skipResize?: boolean;
   transparentColor: string | null;  // Hex color (defaults to #FF00FF when enabled)
   colorTolerance: number;           // 0-255
   hasTransparency?: boolean;        // Whether image has transparency applied
@@ -75,7 +76,9 @@ export async function postProcess(
 
   // Step 2: Resize based on mode
   const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && (options.format === 'png' || options.format === 'webp'));
-  image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
+  if (!options.skipResize) {
+    image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
+  }
 
   // Step 3: Output format
   if (options.format === 'png') {
@@ -120,7 +123,9 @@ export async function postProcessWithDebug(
   }
 
   const hasTransparency = options.hasTransparency ?? (options.transparentColor !== null && (options.format === 'png' || options.format === 'webp'));
-  image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
+  if (!options.skipResize) {
+    image = applyResize(image, options.width, options.height, options.resizeMode, options.format, hasTransparency);
+  }
 
   let buffer: Buffer;
   if (options.format === 'png') {

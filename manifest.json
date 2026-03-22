@@ -1,0 +1,74 @@
+{
+  "manifest_version": "0.3",
+  "name": "@tasopen/mcp-alphabanana",
+  "display_name": "mcp-alphabanana",
+  "version": "1.3.6",
+  "description": "MCP server for image generation using Google Gemini AI",
+  "long_description": "mcp-alphabanana is an MCP server for generating image assets with Google Gemini. It supports fast image generation, transparent PNG/WebP outputs, reference-image guidance, and file or base64 delivery for agent workflows.",
+  "author": {
+    "name": "tasopen",
+    "url": "https://github.com/tasopen"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tasopen/mcp-alphabanana.git"
+  },
+  "homepage": "https://github.com/tasopen/mcp-alphabanana#readme",
+  "documentation": "https://github.com/tasopen/mcp-alphabanana#readme",
+  "support": "https://github.com/tasopen/mcp-alphabanana/issues",
+  "icon": "images/mcp-alphabanana.png",
+  "screenshots": [
+    "images/examples/pixel-art-treasure-chest.png",
+    "images/examples/reference-image-dungeon-loot.webp",
+    "images/examples/photoreal-travel-poster.jpg"
+  ],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {
+        "GEMINI_API_KEY": "${user_config.gemini_api_key}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "generate_image",
+      "description": "Generate image assets with Google Gemini, including transparency, reference-image guidance, and multiple output formats."
+    }
+  ],
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "gemini",
+    "image-generation",
+    "transparent-png",
+    "reference-images",
+    "claude"
+  ],
+  "license": "MIT",
+  "privacy_policies": [
+    "https://policies.google.com/privacy"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin",
+      "win32",
+      "linux"
+    ]
+  },
+  "user_config": {
+    "gemini_api_key": {
+      "type": "string",
+      "title": "Gemini API Key",
+      "description": "API key used to call Google Gemini image generation APIs.",
+      "sensitive": true,
+      "required": true
+    }
+  }
+}

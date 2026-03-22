@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Update README image references to the new `images/` layout, including demo and sample output assets.
+- Expand `manifest.json` for MCPB 0.3 metadata, registry-facing links, static icon packaging, screenshots, and Claude-friendly `user_config` for `GEMINI_API_KEY`.
+- Resize the packaged Claude registry icon at `images/mcp-alphabanana.png` to 512x512.
+- Include `manifest.json`, `glama.json`, and the `images/` directory in npm package contents.
+- Validate the MCPB manifest during release builds and publish a stable GitHub release asset at `mcp-alphabanana-latest.mcpb`.
+
 ## 1.3.6 (2026-03-08)
 - Read the FastMCP server version from `package.json` instead of hardcoding it in `src/index.ts`.
 - Add `Dockerfile`, `glama.json`, and GitHub release workflow files for Glama inspection and GitHub Releases.

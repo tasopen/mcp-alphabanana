@@ -9,10 +9,11 @@
   },
   "files": [
     "dist/",
+    "manifest.json",
+    "glama.json",
     "README.md",
     "README.ja.md",
-    "examples/",
-    "alphabanana.gif",
+    "images/",
     "LICENSE"
   ],
   "scripts": {

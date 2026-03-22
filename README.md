@@ -15,7 +15,7 @@ Key capabilities:
 - Multi-image style guidance with local reference image files
 - Flexible file, base64, or combined outputs for agent workflows
 
-![alphabanana demo](alphabanana.gif)
+![alphabanana demo](images/alphabanana.gif)
 
 ## Quick Start
 
@@ -24,6 +24,14 @@ Run the MCP server with npx:
 ```bash
 npx -y @tasopen/mcp-alphabanana
 ```
+
+Download the latest MCPB bundle for Claude Desktop or registry ingestion:
+
+```text
+https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb
+```
+
+GitHub Releases is the canonical distribution channel for `.mcpb` bundles. Each release publishes both a versioned asset and the stable `mcp-alphabanana-latest.mcpb` filename.
 
 Or add it to your MCP configuration:
 
@@ -44,6 +52,14 @@ Or add it to your MCP configuration:
 ```
 
 Set `GEMINI_API_KEY` before starting the server.
+
+## Claude Registry
+
+The Claude registry / MCPB package metadata is defined in `manifest.json` and ships with the static 512x512 icon at `images/mcp-alphabanana.png`.
+
+- Stable MCPB URL: `https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb`
+- Versioned MCPB URL pattern: `https://github.com/tasopen/mcp-alphabanana/releases/download/vVERSION/mcp-alphabanana-VERSION.mcpb`
+- Support: [GitHub Issues](https://github.com/tasopen/mcp-alphabanana/issues)
 
 ## MCP Server
 
@@ -136,11 +152,11 @@ Full parameter reference for the `generate_image` tool.
 
 ## Example Outputs
 
-These sample outputs were generated with mcp-alphabanana and stored in [examples](examples).
+These sample outputs were generated with mcp-alphabanana and stored in [images/examples](images/examples).
 
 | Pixel art asset | Reference-image game scene | Photorealistic generation |
 | --- | --- | --- |
-| ![Pixel art treasure chest](examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](examples/photoreal-travel-poster.jpg) |
+| ![Pixel art treasure chest](images/examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](images/examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](images/examples/photoreal-travel-poster.jpg) |
 
 ## Configuration
 

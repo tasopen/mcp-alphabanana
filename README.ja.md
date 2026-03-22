@@ -15,7 +15,7 @@ mcp-alphabanana は、Google Gemini を使って画像アセットを生成す�
 - ローカル参照画像を使ったマルチ画像スタイルガイダンス
 - エージェントワークフロー向けの file / base64 / combine 出力
 
-![alphabanana demo](alphabanana.gif)
+![alphabanana demo](images/alphabanana.gif)
 
 ## クイックスタート
 
@@ -24,6 +24,14 @@ npx で MCP サーバーを起動:
 ```bash
 npx -y @tasopen/mcp-alphabanana
 ```
+
+Claude Desktop や registry 連携向けの最新 MCPB バンドル:
+
+```text
+https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb
+```
+
+`.mcpb` の正本配布元は GitHub Releases です。各リリースで版付きアセットに加えて、固定名 `mcp-alphabanana-latest.mcpb` も公開します。
 
 または MCP 設定ファイルに追加:
 
@@ -44,6 +52,14 @@ npx -y @tasopen/mcp-alphabanana
 ```
 
 起動前に `GEMINI_API_KEY` を設定してください。
+
+## Claude Registry 向け情報
+
+Claude registry / MCPB 向けメタデータは `manifest.json` に定義しており、512x512 の静的アイコンとして `images/mcp-alphabanana.png` を同梱しています。
+
+- Stable MCPB URL: `https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb`
+- 版付き MCPB URL パターン: `https://github.com/tasopen/mcp-alphabanana/releases/download/vVERSION/mcp-alphabanana-VERSION.mcpb`
+- サポート: [GitHub Issues](https://github.com/tasopen/mcp-alphabanana/issues)
 
 ## MCP サーバーについて
 
@@ -135,11 +151,11 @@ Glama MCP Server badge:
 
 ## 出力サンプル
 
-mcp-alphabanana で生成したサンプルを [examples](examples) に収録しています。
+mcp-alphabanana で生成したサンプルを [images/examples](images/examples) に収録しています。
 
 | ピクセルアートアセット | 参照画像を使ったゲームシーン | フォトリアル生成 |
 | --- | --- | --- |
-| ![ピクセルアート宝箱](examples/pixel-art-treasure-chest.png) | ![参照画像ダンジョン報酬シーン](examples/reference-image-dungeon-loot.webp) | ![フォトリアル旅行ポスター](examples/photoreal-travel-poster.jpg) |
+| ![ピクセルアート宝箱](images/examples/pixel-art-treasure-chest.png) | ![参照画像ダンジョン報酬シーン](images/examples/reference-image-dungeon-loot.webp) | ![フォトリアル旅行ポスター](images/examples/photoreal-travel-poster.jpg) |
 
 ## 設定
 

@@ -57,6 +57,8 @@ Set `GEMINI_API_KEY` before starting the server.
 
 The Claude registry / MCPB package metadata is defined in `manifest.json` and ships with the static 512x512 icon at `images/mcp-alphabanana.png`.
 
+Native `sharp` runtime packages are declared as optional dependencies so `.mcpb` installs can resolve the correct prebuilt binary on each supported platform without relying on postinstall hooks.
+
 - Stable MCPB URL: `https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb`
 - Versioned MCPB URL pattern: `https://github.com/tasopen/mcp-alphabanana/releases/download/vVERSION/mcp-alphabanana-VERSION.mcpb`
 - Support: [GitHub Issues](https://github.com/tasopen/mcp-alphabanana/issues)
@@ -83,6 +85,8 @@ Glama MCP Server badge:
 ### generate_image
 
 Generates images using Google Gemini with optional transparency, local reference images, grounding, and reasoning metadata.
+
+For Claude Desktop, prefer `outputType=file` for medium or large images. `base64` and `combine` responses consume Claude context and can hit the client's size limit. On Windows, use the FileSystem extension to choose a writable absolute `outputPath` and any local `referenceImages` paths.
 
 Key parameters:
 

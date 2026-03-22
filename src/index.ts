@@ -4,6 +4,17 @@
  * Supports transparent PNG output, multiple resolutions, and style references.
  */
 
+// Global error handlers to capture startup/initialization errors
+process.on('uncaughtException', (error) => {
+  console.error('[UNCAUGHT_EXCEPTION]', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[UNHANDLED_REJECTION]', reason);
+  process.exit(1);
+});
+
 import { FastMCP } from 'fastmcp';
 import { z } from 'zod';
 import * as fs from 'fs/promises';
@@ -565,7 +576,19 @@ server.addTool({
   },
 });
 
-// Start server
-server.start({
-  transportType: 'stdio',
+// Start server (async to properly catch rejected promises from server.start())
+(async () => {
+  try {
+    console.error('[SERVER_STARTUP] Starting MCP server initialization...');
+    await server.start({
+      transportType: 'stdio',
+    });
+    console.error('[SERVER_STARTUP] Server started successfully');
+  } catch (startError) {
+    console.error('[SERVER_STARTUP_ERROR]', startError);
+    process.exit(1);
+  }
+})().catch((err) => {
+  console.error('[SERVER_STARTUP_FATAL]', err);
+  process.exit(1);
 });

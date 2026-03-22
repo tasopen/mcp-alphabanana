@@ -27,3 +27,8 @@ npm-debug.log*
 
 # Test output
 test/output/
+
+# MCPB build artifacts and extraction directories
+output/*.mcpb
+output/*.zip
+output/temp-*/

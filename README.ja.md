@@ -1,6 +1,6 @@
 # mcp-alphabanana
 
-[![npm version](https://img.shields.io/npm/v/@tasopen/mcp-alphabanana)](https://www.npmjs.com/package/@tasopen/mcp-alphabanana)
+<img src="https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/mcp-alphabanana.png" width="48" alt="mcp-alphabanana logo" /> [![npm version](https://img.shields.io/npm/v/@tasopen/mcp-alphabanana)](https://www.npmjs.com/package/@tasopen/mcp-alphabanana)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 [English](README.md) | 日本語
@@ -15,7 +15,7 @@ mcp-alphabanana は、Google Gemini を使って画像アセットを生成す�
 - ローカル参照画像を使ったマルチ画像スタイルガイダンス
 - エージェントワークフロー向けの file / base64 / combine 出力
 
-![alphabanana demo](images/alphabanana.gif)
+![alphabanana demo](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/alphabanana.gif)
 
 ## クイックスタート
 
@@ -162,7 +162,7 @@ mcp-alphabanana で生成したサンプルを [images/examples](images/examples
 
 | ピクセルアートアセット | 参照画像を使ったゲームシーン | フォトリアル生成 |
 | --- | --- | --- |
-| ![ピクセルアート宝箱](images/examples/pixel-art-treasure-chest.png) | ![参照画像ダンジョン報酬シーン](images/examples/reference-image-dungeon-loot.webp) | ![フォトリアル旅行ポスター](images/examples/photoreal-travel-poster.jpg) |
+| ![ピクセルアート宝箱](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/pixel-art-treasure-chest.png) | ![参照画像ダンジョン報酬シーン](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/reference-image-dungeon-loot.webp) | ![フォトリアル旅行ポスター](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/examples/photoreal-travel-poster.jpg) |
 
 ## 設定
 

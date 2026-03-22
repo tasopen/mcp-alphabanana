@@ -117,13 +117,40 @@ jobs:
         if: github.event_name == 'push'
         run: npm pack
 
-      - name: Install all sharp platform binaries for cross-platform MCPB
+      - name: Download cross-platform sharp binaries for MCPB
+        shell: bash
         run: |
-          npm install --no-save \
-            @img/sharp-win32-x64 \
-            @img/sharp-darwin-arm64 \
-            @img/sharp-darwin-x64 \
-            @img/sharp-linux-arm64
+          # npm skips optional packages whose 'os'/'cpu' fields don't match the current
+          # platform (Linux), so we download tarball URLs from the registry directly.
+          download_pkg() {
+            local PKG="$1"
+            local VER="$2"
+            local DIR="node_modules/@img/${PKG}"
+            if [ -d "$DIR" ]; then echo "skip (exists): $DIR"; return; fi
+            local URL
+            URL=$(curl -sf "https://registry.npmjs.org/@img/${PKG}/${VER}" | jq -r '.dist.tarball')
+            mkdir -p "$DIR"
+            curl -sL "$URL" | tar -xz -C "$DIR" --strip-components=1
+            echo "downloaded: $DIR"
+          }
+
+          SHARP_VER=$(node -p "require('./package-lock.json').packages['node_modules/@img/sharp-win32-x64'].version")
+          LIBVIPS_VER=$(node -p "require('./package-lock.json').packages['node_modules/@img/sharp-libvips-darwin-arm64'].version")
+
+          # Windows x64 (self-contained, no libvips dep)
+          download_pkg "sharp-win32-x64"            "$SHARP_VER"
+
+          # macOS ARM64
+          download_pkg "sharp-darwin-arm64"         "$SHARP_VER"
+          download_pkg "sharp-libvips-darwin-arm64" "$LIBVIPS_VER"
+
+          # macOS x64
+          download_pkg "sharp-darwin-x64"           "$SHARP_VER"
+          download_pkg "sharp-libvips-darwin-x64"   "$LIBVIPS_VER"
+
+          # Linux ARM64
+          download_pkg "sharp-linux-arm64"          "$SHARP_VER"
+          download_pkg "sharp-libvips-linux-arm64"  "$LIBVIPS_VER"
 
       - name: Pack MCPB bundle
         shell: bash

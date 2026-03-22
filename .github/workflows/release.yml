@@ -179,4 +179,5 @@ jobs:
           generate_release_notes: true
           files: |
             *.tgz
-            *.mcpb
+            mcp-alphabanana-${{ steps.version.outputs.version }}.mcpb
+            mcp-alphabanana-latest.mcpb

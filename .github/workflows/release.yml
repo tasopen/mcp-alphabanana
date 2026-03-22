@@ -55,6 +55,13 @@ jobs:
             exit 1
           fi
 
+          MANIFEST_VERSION="$(node -p "require('./manifest.json').version")"
+
+          if [[ "$MANIFEST_VERSION" != "${{ steps.version.outputs.version }}" ]]; then
+            echo "Tag version ${{ steps.version.outputs.version }} does not match manifest.json version $MANIFEST_VERSION"
+            exit 1
+          fi
+
       - name: Validate changelog entry
         shell: bash
         run: |
@@ -76,6 +83,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate MCPB manifest
+        run: npx --yes @anthropic-ai/mcpb validate manifest.json
+
       - name: Build
         run: npm run build
 
@@ -92,6 +102,12 @@ jobs:
       - name: Pack npm artifact
         run: npm pack
 
+      - name: Pack MCPB bundle
+        shell: bash
+        run: |
+          npx --yes @anthropic-ai/mcpb pack . mcp-alphabanana-${{ steps.version.outputs.version }}.mcpb
+          cp mcp-alphabanana-${{ steps.version.outputs.version }}.mcpb mcp-alphabanana-latest.mcpb
+
       - name: Publish to npm
         run: npm publish
         env:
@@ -103,3 +119,4 @@ jobs:
           generate_release_notes: true
           files: |
             *.tgz
+            *.mcpb

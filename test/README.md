@@ -31,6 +31,14 @@ Run:
 npm run test:full
 ```
 
+If you want to save the console output, write it into `test/output` explicitly. Otherwise a shell redirect such as `> test_full_output.txt` or `Tee-Object test_full_output.txt` will create the log file in the current working directory.
+
+PowerShell example:
+
+```powershell
+npm run test:full 2>&1 | Tee-Object test/output/test_full_output.txt
+```
+
 ### Post-process only (no extra API calls)
 
 - Runs the post-process pipeline against a cached raw image.
@@ -51,3 +59,4 @@ npx tsx test/test-transparency-only.ts
 
 - Files are written under `test/output`.
 - Fallback writes are forced into `test/output/fallback` via `MCP_FALLBACK_OUTPUT`.
+- Saved console logs should also go under `test/output` when you intentionally capture test output.

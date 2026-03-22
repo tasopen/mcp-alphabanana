@@ -15,7 +15,7 @@ Key capabilities:
 - Multi-image style guidance with local reference image files
 - Flexible file, base64, or combined outputs for agent workflows
 
-![alphabanana demo](alphabanana.gif)
+![alphabanana demo](images/alphabanana.gif)
 
 ## Quick Start
 
@@ -24,6 +24,14 @@ Run the MCP server with npx:
 ```bash
 npx -y @tasopen/mcp-alphabanana
 ```
+
+Download the latest MCPB bundle for Claude Desktop or registry ingestion:
+
+```text
+https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb
+```
+
+GitHub Releases is the canonical distribution channel for `.mcpb` bundles. Each release publishes both a versioned asset and the stable `mcp-alphabanana-latest.mcpb` filename.
 
 Or add it to your MCP configuration:
 
@@ -44,6 +52,14 @@ Or add it to your MCP configuration:
 ```
 
 Set `GEMINI_API_KEY` before starting the server.
+
+## Claude Registry
+
+The Claude registry / MCPB package metadata is defined in `manifest.json` and ships with the static 512x512 icon at `images/mcp-alphabanana.png`.
+
+- Stable MCPB URL: `https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb`
+- Versioned MCPB URL pattern: `https://github.com/tasopen/mcp-alphabanana/releases/download/vVERSION/mcp-alphabanana-VERSION.mcpb`
+- Support: [GitHub Issues](https://github.com/tasopen/mcp-alphabanana/issues)
 
 ## MCP Server
 
@@ -72,7 +88,8 @@ Key parameters:
 
 - `prompt` (string): description of the image to generate
 - `model`: `Flash3.1`, `Flash2.5`, `Pro3`, `flash`, `pro`
-- `outputWidth` and `outputHeight`: requested final image size in pixels
+- `outputWidth` and `outputHeight`: requested final image size in pixels in normal mode
+- `noresize` + `aspectRatio` + `output_resolution`: return Gemini native size without resizing
 - `output_resolution`: `0.5K`, `1K`, `2K`, `4K`
 - `output_format`: `png`, `jpg`, `webp`
 - `outputType`: `file`, `base64`, `combine`
@@ -101,9 +118,11 @@ Full parameter reference for the `generate_image` tool.
 | `outputFileName` | string | *required* | Output filename (extension auto-added if missing) |
 | `outputType` | enum | `combine` | `file`, `base64`, or `combine` |
 | `model` | enum | `Flash3.1` | Model: `Flash3.1`, `Flash2.5`, `Pro3`, `flash`, `pro` |
-| `output_resolution` | enum | auto | `0.5K`, `1K`, `2K`, `4K` (0.5K/2K/4K: Flash3.1 only) |
-| `outputWidth` | integer | *required* | Final output width in pixels |
-| `outputHeight` | integer | *required* | Final output height in pixels |
+| `output_resolution` | enum | auto | `0.5K`, `1K`, `2K`, `4K`; required when `noresize=true` |
+| `noresize` | boolean | `false` | Skip post-generation resize and return Gemini native dimensions |
+| `aspectRatio` | enum | optional | Required when `noresize=true`; e.g. `1:1`, `16:9`, `4:5` |
+| `outputWidth` | integer | required unless `noresize=true` | Final output width in pixels |
+| `outputHeight` | integer | required unless `noresize=true` | Final output height in pixels |
 | `output_format` | enum | `png` | `png`, `jpg`, `webp` |
 | `outputPath` | string | required for `file` / `combine` | Absolute output directory path |
 | `transparent` | boolean | `false` | Transparent background (PNG/WebP only) |
@@ -136,11 +155,11 @@ Full parameter reference for the `generate_image` tool.
 
 ## Example Outputs
 
-These sample outputs were generated with mcp-alphabanana and stored in [examples](examples).
+These sample outputs were generated with mcp-alphabanana and stored in [images/examples](images/examples).
 
 | Pixel art asset | Reference-image game scene | Photorealistic generation |
 | --- | --- | --- |
-| ![Pixel art treasure chest](examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](examples/photoreal-travel-poster.jpg) |
+| ![Pixel art treasure chest](images/examples/pixel-art-treasure-chest.png) | ![Reference-image dungeon loot scene](images/examples/reference-image-dungeon-loot.webp) | ![Photorealistic travel poster](images/examples/photoreal-travel-poster.jpg) |
 
 ## Configuration
 
@@ -205,6 +224,23 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
   "transparent": true
 }
 ```
+
+#### Native Size Without Resize
+
+```json
+{
+  "prompt": "A clean app icon with a banana mascot, flat graphic design",
+  "model": "Flash3.1",
+  "outputFileName": "banana-icon-native",
+  "outputType": "base64",
+  "noresize": true,
+  "aspectRatio": "1:1",
+  "output_resolution": "0.5K",
+  "output_format": "png"
+}
+```
+
+This mode returns the Gemini native pixel size for the requested ratio and resolution. For example, `1:1` + `0.5K` returns `512x512` without any resize pass.
 
 #### Advanced (Vertical poster and thinking)
 

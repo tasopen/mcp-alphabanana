@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      skip_publish:
+        description: 'Skip npm publish and GitHub release (mcpb test build only)'
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -20,19 +26,24 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Extract version from tag
+      - name: Extract version
         id: version
         shell: bash
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          VERSION="${TAG#v}"
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            VERSION="$(node -p "require('./package.json').version")"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            VERSION="${TAG#v}"
 
-          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Invalid release tag: $TAG"
-            exit 1
+            if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "Invalid release tag: $TAG"
+              exit 1
+            fi
+
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Setup Node
@@ -46,6 +57,7 @@ jobs:
         run: npm install --global npm@^11.5.1
 
       - name: Validate package version
+        if: github.event_name == 'push'
         shell: bash
         run: |
           PACKAGE_VERSION="$(node -p "require('./package.json').version")"
@@ -63,6 +75,7 @@ jobs:
           fi
 
       - name: Validate changelog entry
+        if: github.event_name == 'push'
         shell: bash
         run: |
           if ! grep -q "^## ${{ steps.version.outputs.version }} " CHANGELOG.md; then
@@ -71,6 +84,7 @@ jobs:
           fi
 
       - name: Validate tag commit is on main
+        if: github.event_name == 'push'
         shell: bash
         run: |
           git fetch origin main --depth=1
@@ -100,6 +114,7 @@ jobs:
           GEMINI_API_KEY: ''
 
       - name: Pack npm artifact
+        if: github.event_name == 'push'
         run: npm pack
 
       - name: Install all sharp platform binaries for cross-platform MCPB
@@ -116,12 +131,22 @@ jobs:
           npx --yes @anthropic-ai/mcpb pack . mcp-alphabanana-${{ steps.version.outputs.version }}.mcpb
           cp mcp-alphabanana-${{ steps.version.outputs.version }}.mcpb mcp-alphabanana-latest.mcpb
 
+      - name: Upload MCPB artifact (test build)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcpb-test-build
+          path: '*.mcpb'
+          retention-days: 7
+
       - name: Publish to npm
+        if: github.event_name == 'push'
         run: npm publish
         env:
           GEMINI_API_KEY: ''
 
       - name: Create GitHub release
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true

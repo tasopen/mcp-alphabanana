@@ -249,6 +249,7 @@ server.addTool({
   annotations: {
     title: 'Image Generator',
     readOnlyHint: false,
+    destructiveHint: true,
     openWorldHint: true,
   },
   execute: async (args, { log }) => {

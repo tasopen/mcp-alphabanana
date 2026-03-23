@@ -38,7 +38,7 @@ async function main() {
     console.log('Prompt: "A simple red circle, centered, clean edges"');
     console.log('Settings: Flash model, transparent=true, magenta background\n');
 
-    rawImageBuffer = await generateWithGemini({
+    const geminiResult: any = await generateWithGemini({
       prompt: 'A simple red circle, centered, clean edges',
       modelTier: 'flash',
       sourceResolution: '1K',
@@ -47,6 +47,8 @@ async function main() {
       transparentColor: '#FF00FF',
       referenceImages: [],
     });
+
+    rawImageBuffer = geminiResult.imageBuffer ?? geminiResult;
 
     await fs.writeFile(CACHED_IMAGE_PATH, rawImageBuffer);
     console.log(`✓ Image downloaded and cached to: ${CACHED_IMAGE_PATH}\n`);

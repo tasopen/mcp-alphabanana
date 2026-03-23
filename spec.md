@@ -1,11 +1,11 @@
 ---
 title: "mcp-alphabanana Specification"
-version: "1.4.2"
+version: "1.4.3"
 license: "MIT"
 node_compatibility: ">=18"
 ---
 
-# mcp-alphabanana Specification (v1.4.2, Nano Banana 2/Gemini 3.1 Flash Image)
+# mcp-alphabanana Specification (v1.4.3, Nano Banana 2/Gemini 3.1 Flash Image)
 
 ## 1. Overview
 
@@ -19,6 +19,7 @@ mcp-alphabanana is a Model Context Protocol server for generating image assets u
 
 | Version | Date | Highlights |
 |---|---|---|
+| 1.4.3 | 2026-03-24 | Bump version to prepare a rebuilt MCPB bundle (repackage with updated artifacts). |
 | 1.4.2 | 2026-03-22 | Reduce npm package size by excluding image assets; improve cross-platform `.mcpb` bundling; add logo icon to README. |
 
 ## 2. Model Specifications & Compatibility

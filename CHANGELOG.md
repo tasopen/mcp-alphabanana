@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.4.3 (2026-03-24)
+- Prepare for MCPB rebuild: bump package version to 1.4.3 and repackage updated artifacts for release.
+- Ensure optional platform `sharp` binaries are included in the bundle and verify fallback assets.
+
 ## 1.4.2 (2026-03-22)
 - Reduce npm package size from 3.6 MB to ~130 KB by excluding image assets from the package and replacing relative image paths in README with GitHub raw URLs.
 - Fix cross-platform `.mcpb` bundle: install all `sharp` platform binaries (`win32-x64`, `darwin-arm64`, `darwin-x64`, `linux-arm64`) before packing in CI so the bundle works on all platforms.

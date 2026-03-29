@@ -17,6 +17,10 @@ Key capabilities:
 
 ![alphabanana demo](https://raw.githubusercontent.com/tasopen/mcp-alphabanana/main/images/alphabanana.gif)
 
+## Hosted deployment
+
+A hosted deployment is available on [Fronteir AI](https://fronteir.ai/mcp/tasopen-mcp-alphabanana).
+
 ## Quick Start
 
 Run the MCP server with npx:

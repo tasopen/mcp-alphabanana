@@ -24,15 +24,6 @@ Run the MCP server with npx:
 ```bash
 npx -y @tasopen/mcp-alphabanana
 ```
-
-Download the latest MCPB bundle for Claude Desktop or registry ingestion:
-
-```text
-https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb
-```
-
-GitHub Releases is the canonical distribution channel for `.mcpb` bundles. Each release publishes both a versioned asset and the stable `mcp-alphabanana-latest.mcpb` filename.
-
 Or add it to your MCP configuration:
 
 ```json
@@ -52,6 +43,11 @@ Or add it to your MCP configuration:
 ```
 
 Set `GEMINI_API_KEY` before starting the server.
+
+For Claude Desktop,
+Download `mcp-alphabanana-latest.mcpb`, then add it as Extension from Claude Desktop Settings. For Windows, Recommend add 'FileSystem' extension for better local file handling.  
+[![Download MCPB](https://img.shields.io/badge/Download-mcpb-blue?logo=github&style=flat-square)](https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb) 
+
 
 ## Claude Registry
 

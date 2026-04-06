@@ -25,14 +25,6 @@ npx で MCP サーバーを起動:
 npx -y @tasopen/mcp-alphabanana
 ```
 
-Claude Desktop や registry 連携向けの最新 MCPB バンドル:
-
-```text
-https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb
-```
-
-`.mcpb` の正本配布元は GitHub Releases です。各リリースで版付きアセットに加えて、固定名 `mcp-alphabanana-latest.mcpb` も公開します。
-
 または MCP 設定ファイルに追加:
 
 ```json
@@ -52,6 +44,9 @@ https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphaban
 ```
 
 起動前に `GEMINI_API_KEY` を設定してください。
+
+Claude Desktop の場合は、`mcp-alphabanana-latest.mcpb` をダウンロードしてから、Claude Desktop の設定から 拡張機能 として追加してください。Windows では、ローカルファイルを扱いやすくするため `FileSystem` 拡張機能の追加も推奨です。  
+[![Download MCPB](https://img.shields.io/badge/Download-mcpb-blue?logo=github&style=flat-square)](https://github.com/tasopen/mcp-alphabanana/releases/latest/download/mcp-alphabanana-latest.mcpb)
 
 ## Claude Registry 向け情報
 

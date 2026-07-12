@@ -321,6 +321,11 @@ server.addTool({
         sourceResolution = selectSourceResolutionSmart(args.outputWidth!, args.outputHeight!, aspectRatio);
         log.info('Auto-selected sourceResolution', { sourceResolution });
       }
+      // Pro3 does not support 0.5K — fall back to 1K before calculating output size
+      if ((args.model === 'Pro3' || args.model === 'pro') && sourceResolution === '0.5K') {
+        log.warn('Pro3 does not support 0.5K resolution, falling back to 1K');
+        sourceResolution = '1K';
+      }
       const outputSize = usesNativeSize
         ? getGeminiNativeSize(aspectRatio, sourceResolution)
         : { width: args.outputWidth!, height: args.outputHeight! };

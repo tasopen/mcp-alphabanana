@@ -58,7 +58,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A flat red square icon with a white border.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_base64',
         outputType: 'base64',
         outputWidth: 32,
@@ -84,7 +84,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A minimal green triangle with a simple outline.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_combine',
         outputType: 'combine',
         outputWidth: 48,
@@ -114,7 +114,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple yellow star with a solid background.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_jpg',
         outputType: 'base64',
         outputWidth: 32,
@@ -164,7 +164,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A placeholder icon for validation.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_relative',
         outputType: 'file',
         outputWidth: 32,
@@ -188,7 +188,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'Create an original tiny banana icon using the reference image only as loose inspiration for the blue color palette. Do not reproduce the reference image composition.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_reference',
         outputType: 'base64',
         outputWidth: 32,
@@ -232,6 +232,92 @@ describe('mcp-alphabanana full', () => {
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
+  });
+
+  test.runIf(hasApiKey)('Pro3 falls back to 1K when 0.5K is explicitly requested', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A simple blue square icon.',
+        model: 'Pro3',
+        output_resolution: '0.5K',
+        outputFileName: 'full_pro_05k_fallback',
+        outputType: 'base64',
+        outputWidth: 32,
+        outputHeight: 32,
+        output_format: 'png',
+        transparent: false,
+      },
+    };
+
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: Pro3 falls back to 1K when 0.5K is explicitly requested',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+    // Output is resized to 32x32 regardless of source resolution
+    expect(parsed.width).toBe(32);
+    expect(parsed.height).toBe(32);
+  });
+
+  test.runIf(hasApiKey)('Pro3 noresize with 0.5K falls back to 1K native dimensions', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A simple purple star icon on a white background.',
+        model: 'Pro3',
+        outputFileName: 'full_pro_05k_noresize_fallback',
+        outputType: 'base64',
+        noresize: true,
+        aspectRatio: '1:1',
+        output_resolution: '0.5K',
+        output_format: 'png',
+        transparent: false,
+      },
+    };
+
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: Pro3 noresize with 0.5K falls back to 1K native dimensions',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+    // 0.5K is not supported by Pro3, so it falls back to 1K (1024x1024 for 1:1)
+    expect(parsed.width).toBe(1024);
+    expect(parsed.height).toBe(1024);
+  });
+
+  test.runIf(hasApiKey)('pro alias falls back from 0.5K to 1K', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A simple green circle icon.',
+        model: 'pro',
+        output_resolution: '0.5K',
+        outputFileName: 'full_pro_alias_05k_fallback',
+        outputType: 'base64',
+        outputWidth: 32,
+        outputHeight: 32,
+        output_format: 'png',
+        transparent: false,
+      },
+    };
+
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: pro alias falls back from 0.5K to 1K',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+    expect(parsed.width).toBe(32);
+    expect(parsed.height).toBe(32);
   });
 
   test.runIf(hasApiKey)('Lite3.1 forces 1K resolution when 2K requested', async () => {
@@ -330,7 +416,7 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A gray circle used for fallback testing.',
-        model: 'flash',
+        model: 'Flash3.1',
         outputFileName: 'full_fallback',
         outputType: 'file',
         outputWidth: 32,

@@ -51,6 +51,30 @@ describe('mcp-alphabanana sanity', () => {
   });
 
 
+  test.runIf(hasApiKey)('Flash2.5 legacy model still generates', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A tiny pixel art blue berry game icon, centered on a plain light gray background.',
+        model: 'Flash2.5',
+        outputFileName: 'sanity_flash25_legacy',
+        outputType: 'base64',
+        outputWidth: 32,
+        outputHeight: 32,
+        output_resolution: '1K',
+        output_format: 'png',
+        transparent: false,
+      },
+    };
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'sanity: Flash2.5 legacy model still generates',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+  });
+
   test.runIf(hasApiKey)('Flash3.1 minimal image generation', async () => {
     if (!handle) throw new Error('MCP client not initialized');
     const request = {

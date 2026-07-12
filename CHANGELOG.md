@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.1 (2026-07-12)
+- Pro3 model: fall back from 0.5K to 1K resolution when 0.5K is requested (Pro3 does not support 0.5K)
+- Migrate full test suite from deprecated Flash2.5 to Flash3.1 as the primary model; keep one Flash2.5 sanity test for legacy compatibility
+
 ## 1.5.0 (2026-07-12)
 - Support 'Gemini 3.1 Flash Lite Image' model
 - Add support for 'Gemini 3.1 Flash Lite Image' model. short name 'Lite'

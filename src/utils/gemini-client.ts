@@ -261,6 +261,11 @@ export async function generateWithGemini(options: GenerateWithGeminiOptions): Pr
     }
   }
 
+  if ((options.modelTier === 'Pro3' || options.modelTier === 'pro') && effectiveSourceResolution === '0.5K') {
+    console.warn(`[Pro3] sourceResolution overridden from '0.5K' to '1K' (0.5K is not supported by Pro3)`);
+    effectiveSourceResolution = '1K';
+  }
+
   // Build the prompt with transparency instructions
   let enhancedPrompt = options.prompt;
 

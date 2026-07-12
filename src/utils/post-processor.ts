@@ -10,7 +10,10 @@
  *   5. Resize
  */
 
-import sharp from 'sharp';
+import sharp, {
+  Sharp,
+  type KernelEnum,
+} from 'sharp';
 
 export type ResizeMode = 'crop' | 'stretch' | 'letterbox' | 'contain';
 export type OutputFormat = 'png' | 'jpg' | 'webp';
@@ -144,7 +147,7 @@ export async function postProcessWithDebug(
  * Falls back to corner sampling when the histogram cannot find a suitable color.
  */
 async function selectTransparentColor(
-  image: sharp.Sharp,
+  image: Sharp,
   requestedHex: string,
   tolerance: number,
 ): Promise<{ color: { r: number; g: number; b: number }; method: 'histogram' | 'corner'; cornerColors: { r: number; g: number; b: number }[] }> {
@@ -289,13 +292,13 @@ function normalizeTransparentColor(color: string | null): string {
  * @returns New Sharp instance with transparency applied
  */
 async function applyTransparency(
-  image: sharp.Sharp,
+  image: Sharp,
   hexColor: string,
   tolerance: number,
   outputWidth: number,
   outputHeight: number,
   fringeMode: FringeMode = 'auto',
-): Promise<sharp.Sharp> {
+): Promise<Sharp> {
   // Parse hex color
   const { r: targetR, g: targetG, b: targetB } = parseHexColor(hexColor);
 
@@ -661,17 +664,17 @@ function resolveFringeMode(mode: FringeMode, width: number, height: number): 'cr
  * Apply resize with specified mode.
  */
 function applyResize(
-  image: sharp.Sharp,
+  image: Sharp,
   width: number,
   height: number,
   mode: ResizeMode,
   format: OutputFormat,
   hasTransparency: boolean
-): sharp.Sharp {
+): Sharp {
   // Determine resize kernel based on output size
   // Use nearest-neighbor for small sprites (preserves pixel art)
   // Use lanczos3 for larger images (better quality)
-  const kernel: keyof sharp.KernelEnum =
+  const kernel: keyof KernelEnum =
     width <= 64 && height <= 64 ? 'nearest' : 'lanczos3';
 
   switch (mode) {

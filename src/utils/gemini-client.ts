@@ -41,14 +41,15 @@ export function selectSourceResolutionSmart(width: number, height: number, aspec
 import { GoogleGenAI, type Part } from '@google/genai';
 import { GEMINI_NATIVE_SIZES, type AspectRatioKey, type GeminiResolutionKey } from './aspect-ratio.js';
 
-// Model configuration
+// Model configuration (Updated to production/GA model IDs)
 const MODELS = {
-  'Flash3.1': 'gemini-3.1-flash-image-preview',
+  'Flash3.1': 'gemini-3.1-flash-image',
+  'Lite3.1': 'gemini-3.1-flash-lite-image',
   'Flash2.5': 'gemini-2.5-flash-image',
-  'Pro3': 'gemini-3-pro-image-preview',
+  'Pro3': 'gemini-3-pro-image',
   // Aliases for backward compatibility
-  flash: 'gemini-3.1-flash-image-preview',
-  pro: 'gemini-3-pro-image-preview',
+  flash: 'gemini-3.1-flash-image',
+  pro: 'gemini-3-pro-image',
 } as const;
 
 // Source resolution mapping (API supported values: '512', '1K', '2K', '4K')
@@ -60,7 +61,7 @@ const SOURCE_RESOLUTIONS: Record<SourceResolution, string> = {
   '4K': '4K',
 } as const;
 
-export type ModelTier = 'Flash3.1' | 'Flash2.5' | 'Pro3' | 'flash' | 'pro';
+export type ModelTier = 'Flash3.1' | 'Lite3.1' | 'Flash2.5' | 'Pro3' | 'flash' | 'pro';
 export type SourceResolution = GeminiResolutionKey;
 export type GroundingType = 'none' | 'text' | 'image' | 'both';
 export type ThinkingMode = 'minimal' | 'high';
@@ -245,6 +246,21 @@ export async function generateWithGemini(options: GenerateWithGeminiOptions): Pr
   const genAI = new GoogleGenAI({ apiKey });
   const model = MODELS[options.modelTier];
 
+  // Parameter guarding for Lite3.1 (Nano Banana 2 Lite)
+  // The Lite model only supports 1K resolution and does not support search grounding.
+  let effectiveSourceResolution = options.sourceResolution;
+  let effectiveGroundingType: GroundingType | undefined = options.groundingType;
+  if (options.modelTier === 'Lite3.1') {
+    if (effectiveSourceResolution !== '1K') {
+      console.error(`[Lite3.1] sourceResolution overridden from '${effectiveSourceResolution}' to '1K' (Lite model supports 1K only)`);
+      effectiveSourceResolution = '1K';
+    }
+    if (effectiveGroundingType && effectiveGroundingType !== 'none') {
+      console.error(`[Lite3.1] groundingType overridden from '${effectiveGroundingType}' to 'none' (Lite model does not support search grounding)`);
+      effectiveGroundingType = 'none';
+    }
+  }
+
   // Build the prompt with transparency instructions
   let enhancedPrompt = options.prompt;
 
@@ -311,25 +327,33 @@ The background uniformity is critical for post-processing.`;
     responseModalities: ['IMAGE', 'TEXT'],
     imageConfig: {
       aspectRatio: options.aspectRatio,
-      imageSize: SOURCE_RESOLUTIONS[options.sourceResolution],
+      imageSize: SOURCE_RESOLUTIONS[effectiveSourceResolution],
     },
   };
 
   const isGemini3 = model.includes('gemini-3');
-  const requestedGrounding: GroundingType = options.groundingType ?? 'none';
-  const effectiveGrounding: GroundingType = requestedGrounding !== 'none'
+  const requestedGrounding: GroundingType = effectiveGroundingType ?? 'none';
+let effectiveGrounding: GroundingType = requestedGrounding !== 'none'
     ? requestedGrounding
     : inferGroundingTypeFromPrompt(options.prompt);
 
-  // Thinking
+// Block grounding for Lite3.1 (Nano Banana 2 Lite) due to model limitations
+  if (options.modelTier === 'Lite3.1') {
+    effectiveGrounding = 'none';
+  }
+
+  // Thinking Mode setup
   if (isGemini3) {
-    if (options.thinkingMode === 'high') {
+    // For Lite3.1 (Nano Banana 2 Lite), thinkingConfig is not supported, so we skip adding it.
+    if (options.modelTier === 'Lite3.1') {
+      // Lite model skips thinkingConfig entirely, as it does not support reasoning features.
+           } else if (options.thinkingMode === 'high') {
       (generationConfig as any).thinkingConfig = {
         thinkingBudget: 1024,
         includeThoughts: options.includeThoughts ?? false,
       };
     } else if (options.includeThoughts) {
-      // Keep minimal budget but request thought fields when explicitly requested.
+            // Keep minimal budget but request thought fields when explicitly requested.
       (generationConfig as any).thinkingConfig = {
         includeThoughts: true,
       };

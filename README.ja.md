@@ -31,7 +31,7 @@ npx -y @tasopen/mcp-alphabanana
 {
   "mcp": {
     "servers": {
-      "alphabanana": {
+      "mcp-alphabanana": {
         "command": "npx",
         "args": ["-y", "@tasopen/mcp-alphabanana"],
         "env": {

@@ -30,7 +30,7 @@ Or add it to your MCP configuration:
 {
   "mcp": {
     "servers": {
-      "alphabanana": {
+      "mcp-alphabanana": {
         "command": "npx",
         "args": ["-y", "@tasopen/mcp-alphabanana"],
         "env": {

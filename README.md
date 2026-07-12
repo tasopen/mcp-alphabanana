@@ -10,7 +10,7 @@ mcp-alphabanana is a Model Context Protocol (MCP) server for generating image as
 Keywords: MCP server, Model Context Protocol, Gemini AI, image generation, FastMCP
 
 Key capabilities:
-- Ultra-fast Gemini image generation across Flash and Pro tiers
+- Ultra-fast Gemini image generation across Lite, Flash, and Pro tiers
 - Transparent PNG/WebP asset output for web and game pipelines
 - Multi-image style guidance with local reference image files
 - Flexible file, base64, or combined outputs for agent workflows
@@ -87,7 +87,7 @@ For Claude Desktop, prefer `outputType=file` for medium or large images. `base64
 Key parameters:
 
 - `prompt` (string): description of the image to generate
-- `model`: `Flash3.1`, `Flash2.5`, `Pro3`, `flash`, `pro`
+- `model`: `Flash3.1`, `Lite3.1`, `Flash2.5`, `Pro3`, `flash`, `pro`
 - `outputWidth` and `outputHeight`: requested final image size in pixels in normal mode
 - `noresize` + `aspectRatio` + `output_resolution`: return Gemini native size without resizing
 - `output_resolution`: `0.5K`, `1K`, `2K`, `4K`
@@ -102,11 +102,12 @@ Key parameters:
 
 | Input Model ID | Internal Model ID | Description |
 | --- | --- | --- |
-| `Flash3.1` | `gemini-3.1-flash-image-preview` | Ultra-fast, supports Thinking/Grounding. |
+| `Flash3.1` | `gemini-3.1-flash-image` | Ultra-fast, supports Thinking/Grounding. |
+| `Lite3.1` | `gemini-3.1-flash-lite-image` | Ultra-fast, cost-effective 1K-only model. No Search Grounding. |
 | `Flash2.5` | `gemini-2.5-flash-image` | Legacy Flash. High stability. Low cost. |
-| `Pro3` | `gemini-3.0-pro-image-preview` | High-fidelity Pro model. |
-| `flash` | `gemini-3.1-flash-image-preview` | Alias for backward compatibility. |
-| `pro` | `gemini-3.0-pro-image-preview` | Alias for backward compatibility. |
+| `Pro3` | `gemini-3-pro-image` | High-fidelity Pro model. |
+| `flash` | `gemini-3.1-flash-image` | Alias for backward compatibility. |
+| `pro` | `gemini-3-pro-image` | Alias for backward compatibility. |
 
 ### Parameters
 
@@ -117,7 +118,7 @@ Full parameter reference for the `generate_image` tool.
 | `prompt` | string | *required* | Description of the image to generate |
 | `outputFileName` | string | *required* | Output filename (extension auto-added if missing) |
 | `outputType` | enum | `combine` | `file`, `base64`, or `combine` |
-| `model` | enum | `Flash3.1` | Model: `Flash3.1`, `Flash2.5`, `Pro3`, `flash`, `pro` |
+| `model` | enum | `Flash3.1` | Model: `Flash3.1`, `Lite3.1`, `Flash2.5`, `Pro3`, `flash`, `pro` |
 | `output_resolution` | enum | auto | `0.5K`, `1K`, `2K`, `4K`; required when `noresize=true` |
 | `noresize` | boolean | `false` | Skip post-generation resize and return Gemini native dimensions |
 | `aspectRatio` | enum | optional | Required when `noresize=true`; e.g. `1:1`, `16:9`, `4:5` |
@@ -134,7 +135,7 @@ Full parameter reference for the `generate_image` tool.
 | `thinking_mode` | enum | `minimal` | `minimal`, `high` (Flash3.1 only) |
 | `include_thoughts` | boolean | `false` | Return model reasoning fields when metadata is enabled |
 | `include_metadata` | boolean | `false` | Include grounding and reasoning metadata in JSON output |
-| `referenceImages` | array | `[]` | Up to 14 local reference files (Flash3.1/Pro3), 3 for Flash2.5 |
+| `referenceImages` | array | `[]` | Up to 14 local reference files (Flash3.1/Pro3/Lite3.1), 3 for Flash2.5 |
 | `debug` | boolean | `false` | Save intermediate debug artifacts |
 
 ## Why alphabanana?
@@ -146,12 +147,13 @@ Full parameter reference for the `generate_image` tool.
 ## Features
 
 - **Ultra-fast image generation** (Gemini 3.1 Flash, 0.5K/1K/2K/4K)
+- **Nano Banana 2 Lite** (`Lite3.1`): ultra-fast, cost-effective 1K-only model for quick drafting and low-latency iteration
 - **Advanced multi-image reasoning** (up to 14 reference images)
 - **Thinking/Grounding support** (Flash3.1 only)
 - **Transparent PNG/WebP output** (color-key post-processing, despill)
 - **Multiple output formats**: file, base64, or both
 - **Flexible resize modes**: crop, stretch, letterbox, contain
-- **Multiple model tiers**: Flash3.1, Flash2.5, Pro3, legacy aliases
+- **Multiple model tiers**: Flash3.1, Lite3.1, Flash2.5, Pro3, legacy aliases
 
 ## Example Outputs
 

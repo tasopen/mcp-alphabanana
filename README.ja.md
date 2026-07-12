@@ -10,7 +10,7 @@ mcp-alphabanana は、Google Gemini を使って画像アセットを生成す�
 キーワード: MCP サーバー、Model Context Protocol、Gemini AI、画像生成、FastMCP
 
 主な特長:
-- Gemini Flash / Pro を使ったウルトラ高速画像生成
+- Lite, Flash, Pro 各ティアでのウルトラ高速 Gemini 画像生成
 - Web・ゲームパイプライン向けの透過 PNG / WebP アセット出力
 - ローカル参照画像を使ったマルチ画像スタイルガイダンス
 - エージェントワークフロー向けの file / base64 / combine 出力
@@ -85,7 +85,7 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 主なパラメータ:
 
 - `prompt` (string): 生成したい画像の説明
-- `model`: `Flash3.1`、`Flash2.5`、`Pro3`、`flash`、`pro`
+- `model`: `Flash3.1`、`Lite3.1`、`Flash2.5`、`Pro3`、`flash`、`pro`
 - `outputWidth` / `outputHeight`: 通常モードでの出力画像ピクセルサイズ
 - `noresize` + `aspectRatio` + `output_resolution`: リサイズせず Gemini ネイティブサイズを返す
 - `output_resolution`: `0.5K`、`1K`、`2K`、`4K`
@@ -100,11 +100,12 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 
 | 入力モデルID | 内部モデルID | 説明 |
 | --- | --- | --- |
-| `Flash3.1` | `gemini-3.1-flash-image-preview` | 超高速。Thinking / Grounding 対応。 |
+| `Flash3.1` | `gemini-3.1-flash-image` | 超高速。Thinking / Grounding 対応。 |
+| `Lite3.1` | `gemini-3.1-flash-lite-image` | 超高速かつコスト効率の高い 1K 専用モデル。Search Grounding 非対応。 |
 | `Flash2.5` | `gemini-2.5-flash-image` | 旧 Flash 系。安定性高め。低コスト。 |
-| `Pro3` | `gemini-3.0-pro-image-preview` | 高品質な Pro モデル。 |
-| `flash` | `gemini-3.1-flash-image-preview` | 後方互換エイリアス。 |
-| `pro` | `gemini-3.0-pro-image-preview` | 後方互換エイリアス。 |
+| `Pro3` | `gemini-3-pro-image` | 高品質な Pro モデル。 |
+| `flash` | `gemini-3.1-flash-image` | 後方互換エイリアス。 |
+| `pro` | `gemini-3-pro-image` | 後方互換エイリアス。 |
 
 ### パラメータ
 
@@ -115,7 +116,7 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 | `prompt` | string | 必須 | 生成したい画像の説明 |
 | `outputFileName` | string | 必須 | 出力ファイル名（拡張子がなければ自動付与） |
 | `outputType` | enum | `combine` | `file`、`base64`、または `combine` |
-| `model` | enum | `Flash3.1` | `Flash3.1` / `Flash2.5` / `Pro3` / `flash` / `pro` |
+| `model` | enum | `Flash3.1` | `Flash3.1` / `Lite3.1` / `Flash2.5` / `Pro3` / `flash` / `pro` |
 | `output_resolution` | enum | auto | `0.5K` / `1K` / `2K` / `4K`。`noresize=true` の場合は必須 |
 | `noresize` | boolean | `false` | 生成後リサイズを行わず、Gemini ネイティブの寸法を返す |
 | `aspectRatio` | enum | optional | `noresize=true` の場合に必須。例: `1:1`、`16:9`、`4:5` |
@@ -132,7 +133,7 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 | `thinking_mode` | enum | `minimal` | `minimal` / `high`（Flash3.1 のみ） |
 | `include_thoughts` | boolean | `false` | メタデータ有効時にモデルの推論フィールドを返す |
 | `include_metadata` | boolean | `false` | JSON 出力に grounding / reasoning メタデータを含める |
-| `referenceImages` | array | `[]` | 最大 14 ファイル（Flash3.1/Pro3）、Flash2.5 は 3 枚 |
+| `referenceImages` | array | `[]` | 最大 14 ファイル（Flash3.1/Pro3/Lite3.1）、Flash2.5 は 3 枚 |
 | `debug` | boolean | `false` | デバッグ用途の中間ファイルを保存 |
 
 ## mcp-alphabanana を選ぶ理由
@@ -144,6 +145,7 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 ## 主な機能
 
 - **超高速画像生成**（Gemini 3.1 Flash、0.5K/1K/2K/4K）
+- **Nano Banana 2 Lite** (`Lite3.1`): 素早いドラフト作成や低レイテンシな反復試行に適した、超高速かつコスト効率の高い 1K 専用モデル
 - **高度なマルチ画像推論**（参照画像を最大 14 枚）
 - **Thinking / Grounding 対応**（Flash3.1 のみ）
 - **透過 PNG / WebP 出力**（カラーキー後処理 + デスピル）

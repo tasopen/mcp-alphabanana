@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.0 (2026-07-12)
+- Support 'Gemini 3.1 Flash Lite Image' model
+- Add support for 'Gemini 3.1 Flash Lite Image' model. short name 'Lite'
+- Update model name from preview to release for avoiding depreciation
+- Update full test to support lite model
+- Update dependencies
+
 ## 1.4.3 (2026-03-24)
 - Prepare for MCPB rebuild: bump package version to 1.4.3 and repackage updated artifacts for release.
 - Ensure optional platform `sharp` binaries are included in the bundle and verify fallback assets.

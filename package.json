@@ -56,8 +56,8 @@
     "url": "https://github.com/tasopen/mcp-alphabanana/issues"
   },
   "dependencies": {
-    "@google/genai": "^1.52.0",
-    "fastmcp": "^3.35.0",
+    "@google/genai": "^2.11.0",
+    "fastmcp": "^4.4.0",
     "sharp": "^0.35.3",
     "zod": "^4.4.3"
   },

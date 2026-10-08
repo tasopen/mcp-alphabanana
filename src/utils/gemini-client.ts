@@ -1,37 +1,34 @@
 /**
- * Select the best Gemini sourceResolution ('0.5K', '1K', '2K', '4K') from width/height.
- * Reference: https://ai.google.dev/gemini-api/docs/image-generation#3.1-flash-image-preview
- * Fallback: '1K' if no match.
- */
-/**
- * Select the best Gemini sourceResolution ('0.5K', '1K', '2K', '4K') from width/height and aspect ratio.
+ * Select the best Gemini sourceResolution ('1K', '2K', '4K') from width/height and aspect ratio.
  * Uses the official Gemini table for all supported aspect ratios and resolutions.
- * Fallback: '1K' if no close match.
+ * The resolution list itself comes from the central model configuration.
+ * Fallback: the largest resolution when the requested size exceeds every native size.
  */
 export function selectSourceResolutionSmart(width: number, height: number, aspectRatio: AspectRatioKey): SourceResolution {
-  // If both sides are less than or equal to 0.5K, return 0.5K
-  const min0_5K = GEMINI_NATIVE_SIZES[aspectRatio]?.['0.5K'];
-  if (min0_5K && width <= min0_5K[0] && height <= min0_5K[1]) {
-    return '0.5K';
+  const candidates = SUPPORTED_RESOLUTIONS
+    .map((resolution) => ({ resolution, native: GEMINI_NATIVE_SIZES[aspectRatio]?.[resolution] }))
+    .filter((entry): entry is { resolution: ResolutionKey; native: [number, number] } => Boolean(entry.native));
+
+  if (candidates.length === 0) {
+    throw new Error(`selectSourceResolutionSmart: No native sizes for aspect ratio "${aspectRatio}".`);
   }
 
-  // If either side exceeds the maximum value (4K), return 4K
-  const max4K = GEMINI_NATIVE_SIZES[aspectRatio]?.['4K'];
-  if (max4K && (width > max4K[0] || height > max4K[1])) {
-    return '4K';
+  const largest = candidates[candidates.length - 1];
+
+  // If either side exceeds the largest native size, use the largest resolution.
+  if (width > largest.native[0] || height > largest.native[1]) {
+    return largest.resolution;
   }
 
-  // To avoid upscaling: select the smallest resolution where both sides are greater than or equal to the ideal value
-  for (const res of ['0.5K','1K','2K','4K'] as const) {
-    const ideal = GEMINI_NATIVE_SIZES[aspectRatio]?.[res];
-    if (!ideal) continue;
-    if (width <= ideal[0] && height <= ideal[1]) {
-      return res;
+  // To avoid upscaling: select the smallest resolution that still covers the requested size.
+  for (const candidate of candidates) {
+    if (width <= candidate.native[0] && height <= candidate.native[1]) {
+      return candidate.resolution;
     }
   }
 
-  // Theoretically unreachable: if none of the above conditions are met
-  throw new Error('selectSourceResolutionSmart: No valid resolution found for the given size and aspect ratio.');
+  // Theoretically unreachable: the largest candidate always covers the size here.
+  return largest.resolution;
 }
 /**
  * Gemini API wrapper for image generation.
@@ -40,31 +37,29 @@ export function selectSourceResolutionSmart(width: number, height: number, aspec
 
 import { GoogleGenAI, type Part } from '@google/genai';
 import { GEMINI_NATIVE_SIZES, type AspectRatioKey, type GeminiResolutionKey } from './aspect-ratio.js';
+import {
+  SUPPORTED_RESOLUTIONS,
+  clampResolutionToModel,
+  clampThinkingLevelToModel,
+  type ModelInput,
+  type ResolutionKey,
+  type ThinkingLevel,
+} from '../config/model-config.js';
+import { resolveModelOrThrow } from '../model-resolver.js';
 
-// Model configuration (Updated to production/GA model IDs)
-const MODELS = {
-  'Flash3.1': 'gemini-3.1-flash-image',
-  'Lite3.1': 'gemini-3.1-flash-lite-image',
-  'Flash2.5': 'gemini-2.5-flash-image',
-  'Pro3': 'gemini-3-pro-image',
-  // Aliases for backward compatibility
-  flash: 'gemini-3.1-flash-image',
-  pro: 'gemini-3-pro-image',
-} as const;
-
-// Source resolution mapping (API supported values: '512', '1K', '2K', '4K')
-// '512' provides smaller assets suitable for icons, while '1K' is the quality default.
+// Source resolution mapping to API `imageSize` values ('1K', '2K', '4K').
+// v1.6.0: '0.5K' (API value '512') has been removed.
 const SOURCE_RESOLUTIONS: Record<SourceResolution, string> = {
-  '0.5K': '512',
   '1K': '1K',
   '2K': '2K',
   '4K': '4K',
 } as const;
 
-export type ModelTier = 'Flash3.1' | 'Lite3.1' | 'Flash2.5' | 'Pro3' | 'flash' | 'pro';
+/** Model names/aliases accepted by this client (canonical list: src/config/model-config.ts). */
+export type ModelTier = ModelInput;
 export type SourceResolution = GeminiResolutionKey;
 export type GroundingType = 'none' | 'text' | 'image' | 'both';
-export type ThinkingMode = 'minimal' | 'high';
+export type ThinkingMode = ThinkingLevel;
 
 export interface ReferenceImage {
   description?: string;
@@ -140,7 +135,7 @@ function extractThoughtText(parts: unknown): string | undefined {
 }
 
 function buildReasoningSummary(details: GeminiReasoningDetails): string {
-  const modeLabel = details.mode === 'high' ? 'high thinking' : 'minimal thinking';
+  const modeLabel = `${details.mode} thinking`;
   if (!details.includeThoughts) {
     return `Reasoning metadata captured with ${modeLabel}; thought text output is disabled.`;
   }
@@ -244,26 +239,37 @@ export async function generateWithGemini(options: GenerateWithGeminiOptions): Pr
   }
 
   const genAI = new GoogleGenAI({ apiKey });
-  const model = MODELS[options.modelTier];
 
-  // Parameter guarding for Lite3.1 (Nano Banana 2 Lite)
-  // The Lite model only supports 1K resolution and does not support search grounding.
+  // Single resolution path: alias → canonical model → MODEL_CONFIG → lifecycle → capabilities → Google model ID.
+  const resolvedModel = resolveModelOrThrow(options.modelTier);
+  const model = resolvedModel.googleModelId;
+  const modelName = resolvedModel.key;
+  const capabilities = resolvedModel.config.capabilities;
+
+  // Capability-driven parameter guarding (single source: MODEL_CONFIG).
   let effectiveSourceResolution = options.sourceResolution;
   let effectiveGroundingType: GroundingType | undefined = options.groundingType;
-  if (options.modelTier === 'Lite3.1') {
-    if (effectiveSourceResolution !== '1K') {
-      console.error(`[Lite3.1] sourceResolution overridden from '${effectiveSourceResolution}' to '1K' (Lite model supports 1K only)`);
-      effectiveSourceResolution = '1K';
-    }
-    if (effectiveGroundingType && effectiveGroundingType !== 'none') {
-      console.error(`[Lite3.1] groundingType overridden from '${effectiveGroundingType}' to 'none' (Lite model does not support search grounding)`);
-      effectiveGroundingType = 'none';
-    }
+
+  if (!capabilities.supportedResolutions.includes(effectiveSourceResolution)) {
+    const clamped = clampResolutionToModel(effectiveSourceResolution, capabilities.supportedResolutions);
+    console.warn(`[${modelName}] sourceResolution overridden from '${effectiveSourceResolution}' to '${clamped}' (supported: ${capabilities.supportedResolutions.join(', ')})`);
+    effectiveSourceResolution = clamped;
   }
 
-  if ((options.modelTier === 'Pro3' || options.modelTier === 'pro') && effectiveSourceResolution === '0.5K') {
-    console.warn(`[Pro3] sourceResolution overridden from '0.5K' to '1K' (0.5K is not supported by Pro3)`);
-    effectiveSourceResolution = '1K';
+  if (!capabilities.grounding && effectiveGroundingType && effectiveGroundingType !== 'none') {
+    console.warn(`[${modelName}] groundingType overridden from '${effectiveGroundingType}' to 'none' (model does not support search grounding)`);
+    effectiveGroundingType = 'none';
+  }
+
+  // Thinking level: clamp to the levels the model supports (e.g. NanoBanana2.1 accepts
+  // minimal/medium/high with a model default of medium; Flash3.1/Pro3 accept minimal/high).
+  const requestedThinkingLevel = options.thinkingMode ??
+    capabilities.defaultThinkingLevel ?? 'minimal';
+  const effectiveThinkingLevel = capabilities.thinking
+    ? clampThinkingLevelToModel(requestedThinkingLevel, capabilities)
+    : requestedThinkingLevel;
+  if (effectiveThinkingLevel !== requestedThinkingLevel) {
+    console.warn(`[${modelName}] thinkingMode overridden from '${requestedThinkingLevel}' to '${effectiveThinkingLevel}' (supported: ${capabilities.thinkingLevels.join(', ') || 'none'})`);
   }
 
   // Build the prompt with transparency instructions
@@ -317,7 +323,7 @@ The background uniformity is critical for post-processing.`;
     }
   }
 
-  // Infuse aspect ratio hint into instructions to ensure the model honors it (especially for 512px)
+  // Infuse aspect ratio hint into instructions to ensure the model honors it.
   const ratioHint = options.aspectRatio === '1:1' ? 'square 1:1 format' : `${options.aspectRatio} aspect ratio`;
   const finalPrompt = `${enhancedPrompt}\n\nIMPORTANT: Focus on generating a high-quality asset in a ${ratioHint}.`;
 
@@ -336,37 +342,35 @@ The background uniformity is critical for post-processing.`;
     },
   };
 
-  const isGemini3 = model.includes('gemini-3');
   const requestedGrounding: GroundingType = effectiveGroundingType ?? 'none';
-let effectiveGrounding: GroundingType = requestedGrounding !== 'none'
+  let effectiveGrounding: GroundingType = requestedGrounding !== 'none'
     ? requestedGrounding
     : inferGroundingTypeFromPrompt(options.prompt);
 
-// Block grounding for Lite3.1 (Nano Banana 2 Lite) due to model limitations
-  if (options.modelTier === 'Lite3.1') {
+  // Models without grounding capability never search (capability: MODEL_CONFIG).
+  if (!capabilities.grounding) {
     effectiveGrounding = 'none';
   }
 
-  // Thinking Mode setup
-  if (isGemini3) {
-    // For Lite3.1 (Nano Banana 2 Lite), thinkingConfig is not supported, so we skip adding it.
-    if (options.modelTier === 'Lite3.1') {
-      // Lite model skips thinkingConfig entirely, as it does not support reasoning features.
-           } else if (options.thinkingMode === 'high') {
+  // Thinking Mode setup (capability-driven; levels and defaults live in MODEL_CONFIG)
+  if (capabilities.thinking) {
+    if (options.includeThoughts) {
+      // Request the chosen level and ask for thought fields when explicitly requested.
       (generationConfig as any).thinkingConfig = {
-        thinkingBudget: 1024,
-        includeThoughts: options.includeThoughts ?? false,
-      };
-    } else if (options.includeThoughts) {
-            // Keep minimal budget but request thought fields when explicitly requested.
-      (generationConfig as any).thinkingConfig = {
+        thinkingLevel: effectiveThinkingLevel,
         includeThoughts: true,
+      };
+    } else {
+      // Pin the requested level; thought text stays hidden (still billed by Google).
+      (generationConfig as any).thinkingConfig = {
+        thinkingLevel: effectiveThinkingLevel,
+        includeThoughts: false,
       };
     }
   }
 
   // Grounding must be configured under request.config.tools.
-  if (isGemini3 && effectiveGrounding !== 'none') {
+  if (capabilities.grounding && effectiveGrounding !== 'none') {
     (generationConfig as any).tools = buildGroundingTools(effectiveGrounding);
   }
 
@@ -454,7 +458,7 @@ let effectiveGrounding: GroundingType = requestedGrounding !== 'none'
             : (typeof firstCandidate?.thoughtSignature === 'string' ? firstCandidate.thoughtSignature : undefined);
           const thoughtText = options.includeThoughts ? extractThoughtText(content.parts) : undefined;
           const reasoning: GeminiReasoningDetails = {
-            mode: options.thinkingMode ?? 'minimal',
+            mode: effectiveThinkingLevel,
             includeThoughts: options.includeThoughts ?? false,
             hasThoughtSignature: Boolean(thoughtSignature),
             hasThoughtText: Boolean(thoughtText),

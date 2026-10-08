@@ -7,22 +7,34 @@
 
 ## Levels
 
-### Sanity
+### Unit (no API calls)
 
-- Runs a minimal image generation call with small dimensions.
-- Intended for quick confirmation with minimal API usage.
+- `model-config.test.ts`: model mapping, default model, alias resolution, Flash3.1 lifecycle/shutdown (injectable clock), resolution validation, capability limits.
+- `transparency.test.ts`: existing transparency post-processing behavior (`transparent=false` skips color keying, `transparent=true` produces alpha, JPG ignores transparency).
 
 Run:
 
 ```bash
-npm run test
+npm run test:unit
+```
+
+### Sanity
+
+- Runs schema checks plus minimal image generation calls with small dimensions.
+- Intended for quick confirmation with minimal API usage.
+- `npm test` runs the unit tests together with the sanity suite.
+
+Run:
+
+```bash
+npm test
 # or
 npm run test:sanity
 ```
 
 ### Full
 
-- Exercises base64-only, file output, combine output, JPG transparency warning, relative outputPath error, reference images.
+- Exercises base64-only, file output, combine output, JPG transparency warning, relative outputPath error, reference images, `0.5K` validation rejection, and the Flash3.1 deprecation warning (before its 2026-10-29 shutdown).
 - Optional fallback-write test if `MCP_TEST_UNWRITABLE_PATH` is provided.
 
 Run:

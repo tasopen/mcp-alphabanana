@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.6.0 (2026-10-08)
+
+### Added
+
+- Added support for Google Nano Banana 2.1 (`gemini-nano-banana-2.1`).
+- Added NanoBanana2.1 as the default image generation model.
+- Added `medium` to `thinking_mode` (`minimal`, `medium`, `high`); the default is now `medium`, matching NanoBanana2.1's model default. Thinking levels are declared per model in the central configuration (`NanoBanana2.1`: all three; `Flash3.1`/`Pro3`: `minimal`/`high` with fallback to their own default).
+- Added `src/config/model-config.ts` as the single source of truth for model names, Google model IDs, the default model, aliases, lifecycle (deprecation/shutdown), capabilities, and supported resolutions, with `src/model-resolver.ts` as the single model resolution path.
+
+### Changed
+
+- Changed the `flash` alias to use Nano Banana 2.1 (`gemini-nano-banana-2.1`).
+- Removed `0.5K` from supported output resolutions. Supported resolutions are now 1K, 2K, and 4K.
+- `0.5K` requests are rejected with an explicit validation error instead of being converted silently.
+- Model-specific behaviour (reference-image limits, resolution clamping, thinking/grounding) is now driven by the central model capabilities.
+- Thinking requests now send `thinkingConfig.thinkingLevel` to the Gemini API (previously a fixed `thinkingBudget` for `high`).
+- Updated tests (model config, transparency, sanity, full) for the new default model, resolution set, and deprecation behaviour.
+
+### Deprecated
+
+- Deprecated `Flash3.1` (`gemini-3.1-flash-image`).
+- Flash3.1 requests before the shutdown date return a migration warning; Flash3.1 will no longer be available after October 29, 2026 (requests are rejected from that date).
+
+### Transparency
+
+- Kept the existing local transparency post-processing unchanged.
+- No native transparency implementation was added in this release.
+
+### Verified
+
+- Confirmed `@google/genai` ^2.11.0 works with `gemini-nano-banana-2.1` (no SDK bump required).
+
 ## 1.5.1 (2026-07-12)
 - Pro3 model: fall back from 0.5K to 1K resolution when 0.5K is requested (Pro3 does not support 0.5K)
 - Migrate full test suite from deprecated Flash2.5 to Flash3.1 as the primary model; keep one Flash2.5 sanity test for legacy compatibility

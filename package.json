@@ -57,24 +57,24 @@
     "url": "https://github.com/tasopen/mcp-alphabanana/issues"
   },
   "dependencies": {
-    "@google/genai": "^2.11.0",
-    "fastmcp": "^4.4.0",
-    "sharp": "^0.35.3",
-    "zod": "^4.4.3"
+    "@google/genai": "^2.28.0",
+    "fastmcp": "^4.22.4",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
   },
   "optionalDependencies": {
-    "@img/sharp-darwin-arm64": "^0.35.3",
-    "@img/sharp-darwin-x64": "^0.35.3",
-    "@img/sharp-linux-arm64": "^0.35.3",
-    "@img/sharp-linux-x64": "^0.35.3",
-    "@img/sharp-win32-x64": "^0.35.3"
+    "@img/sharp-darwin-arm64": "^0.35.5",
+    "@img/sharp-darwin-x64": "^0.35.5",
+    "@img/sharp-linux-arm64": "^0.35.5",
+    "@img/sharp-linux-x64": "^0.35.5",
+    "@img/sharp-win32-x64": "^0.35.5"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^25.9.5",
     "cross-env": "^10.1.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.23.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.0",
     "vitest": "^4.1.10"
   }

@@ -1,6 +1,6 @@
 {
   "name": "@tasopen/mcp-alphabanana",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "MCP server for image generation using Google Gemini AI",
   "main": "dist/index.js",
   "type": "module",
@@ -22,7 +22,8 @@
     "dev": "npx fastmcp dev src/index.ts",
     "inspect": "npx fastmcp inspect src/index.ts",
     "start": "node dist/index.js",
-    "test": "vitest run test/sanity.test.ts",
+    "test": "vitest run test/model-config.test.ts test/transparency.test.ts test/sanity.test.ts",
+    "test:unit": "vitest run test/model-config.test.ts test/transparency.test.ts",
     "test:sanity": "vitest run test/sanity.test.ts",
     "test:full": "vitest run",
     "test:transparency": "vitest run test/transparency.test.ts",
@@ -56,24 +57,24 @@
     "url": "https://github.com/tasopen/mcp-alphabanana/issues"
   },
   "dependencies": {
-    "@google/genai": "^2.11.0",
-    "fastmcp": "^4.4.0",
-    "sharp": "^0.35.3",
-    "zod": "^4.4.3"
+    "@google/genai": "^2.28.0",
+    "fastmcp": "^4.22.4",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.5"
   },
   "optionalDependencies": {
-    "@img/sharp-darwin-arm64": "^0.35.3",
-    "@img/sharp-darwin-x64": "^0.35.3",
-    "@img/sharp-linux-arm64": "^0.35.3",
-    "@img/sharp-linux-x64": "^0.35.3",
-    "@img/sharp-win32-x64": "^0.35.3"
+    "@img/sharp-darwin-arm64": "^0.35.5",
+    "@img/sharp-darwin-x64": "^0.35.5",
+    "@img/sharp-linux-arm64": "^0.35.5",
+    "@img/sharp-linux-x64": "^0.35.5",
+    "@img/sharp-win32-x64": "^0.35.5"
   },
   "devDependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.1",
     "@types/node": "^25.9.5",
     "cross-env": "^10.1.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.23.0",
+    "tsx": "^4.23.15",
     "typescript": "^5.5.0",
     "vitest": "^4.1.10"
   }

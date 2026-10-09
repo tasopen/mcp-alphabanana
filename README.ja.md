@@ -10,7 +10,7 @@ mcp-alphabanana は、Google Gemini を使って画像アセットを生成す�
 キーワード: MCP サーバー、Model Context Protocol、Gemini AI、画像生成、FastMCP
 
 主な特長:
-- Lite, Flash, Pro 各ティアでのウルトラ高速 Gemini 画像生成
+- Nano Banana 2.1 を既定とした画像生成、ほか Lite / Flash / Pro 各ティア
 - Web・ゲームパイプライン向けの透過 PNG / WebP アセット出力
 - ローカル参照画像を使ったマルチ画像スタイルガイダンス
 - エージェントワークフロー向けの file / base64 / combine 出力
@@ -85,27 +85,28 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 主なパラメータ:
 
 - `prompt` (string): 生成したい画像の説明
-- `model`: `Flash3.1`、`Lite3.1`、`Flash2.5`、`Pro3`、`flash`、`pro`
+- `model`: `NanoBanana2.1`（既定）、`Flash3.1`（非推奨）、`Lite3.1`、`Flash2.5`、`Pro3`、エイリアス `flash` / `pro`
 - `outputWidth` / `outputHeight`: 通常モードでの出力画像ピクセルサイズ
 - `noresize` + `aspectRatio` + `output_resolution`: リサイズせず Gemini ネイティブサイズを返す
-- `output_resolution`: `0.5K`、`1K`、`2K`、`4K`
+- `output_resolution`: `1K`、`2K`、`4K`
 - `output_format`: `png`、`jpg`、`webp`
 - `outputType`: `file`、`base64`、`combine`
 - `outputPath`: `outputType` が `file` または `combine` の場合に必須
 - `transparent`: 透過 PNG / WebP 後処理を有効化
 - `referenceImages`: ローカル参照画像ファイルの配列（任意）
-- `grounding_type` / `thinking_mode`: Gemini 3.1 の高度な制御
+- `grounding_type` / `thinking_mode`: Gemini の高度な制御（`thinking_mode`: `minimal` / `medium` / `high`、既定 `medium`）
 
 ### モデル選択
 
 | 入力モデルID | 内部モデルID | 説明 |
 | --- | --- | --- |
-| `Flash3.1` | `gemini-3.1-flash-image` | 超高速。Thinking / Grounding 対応。 |
+| `NanoBanana2.1` | `gemini-nano-banana-2.1` | **既定。** Google Nano Banana 2.1。画質・プロンプト追従・テキスト描画・参照画像処理が最も高品質。1K/2K/4K、参照画像最大 14 枚。 |
+| `Flash3.1` | `gemini-3.1-flash-image` | **非推奨。** 超高速。Thinking / Grounding 対応。Google は 2026-10-29（October 29, 2026）にシャットダウンし、同日以降はリクエスト拒否。`NanoBanana2.1` へ移行してください。 |
 | `Lite3.1` | `gemini-3.1-flash-lite-image` | 超高速かつコスト効率の高い 1K 専用モデル。Search Grounding 非対応。 |
-| `Flash2.5` | `gemini-2.5-flash-image` | 旧 Flash 系。安定性高め。低コスト。 |
+| `Flash2.5` | `gemini-2.5-flash-image` | 旧 Flash 系。安定性高め。低コスト。1K のみ。 |
 | `Pro3` | `gemini-3-pro-image` | 高品質な Pro モデル。 |
-| `flash` | `gemini-3.1-flash-image` | 後方互換エイリアス。 |
-| `pro` | `gemini-3-pro-image` | 後方互換エイリアス。 |
+| `flash` | `gemini-nano-banana-2.1` | 既定モデル（`NanoBanana2.1`）へのエイリアス。 |
+| `pro` | `gemini-3-pro-image` | `Pro3` へのエイリアス。 |
 
 ### パラメータ
 
@@ -116,8 +117,8 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 | `prompt` | string | 必須 | 生成したい画像の説明 |
 | `outputFileName` | string | 必須 | 出力ファイル名（拡張子がなければ自動付与） |
 | `outputType` | enum | `combine` | `file`、`base64`、または `combine` |
-| `model` | enum | `Flash3.1` | `Flash3.1` / `Lite3.1` / `Flash2.5` / `Pro3` / `flash` / `pro` |
-| `output_resolution` | enum | auto | `0.5K` / `1K` / `2K` / `4K`。`noresize=true` の場合は必須 |
+| `model` | enum | `NanoBanana2.1` | `NanoBanana2.1` / `Flash3.1` / `Lite3.1` / `Flash2.5` / `Pro3` / `flash` / `pro` |
+| `output_resolution` | string | auto | `1K` / `2K` / `4K`（`0.5K` は v1.6.0 で削除）。`noresize=true` の場合は必須 |
 | `noresize` | boolean | `false` | 生成後リサイズを行わず、Gemini ネイティブの寸法を返す |
 | `aspectRatio` | enum | optional | `noresize=true` の場合に必須。例: `1:1`、`16:9`、`4:5` |
 | `outputWidth` | integer | `noresize=true` 以外では必須 | 出力幅（ピクセル） |
@@ -129,11 +130,11 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 | `colorTolerance` | integer | `30` | 透過カラーのマッチング許容範囲 |
 | `fringeMode` | enum | `auto` | `auto` / `crisp` / `hd` |
 | `resizeMode` | enum | `crop` | `crop` / `stretch` / `letterbox` / `contain` |
-| `grounding_type` | enum | `none` | `none` / `text` / `image` / `both`（Flash3.1 のみ） |
-| `thinking_mode` | enum | `minimal` | `minimal` / `high`（Flash3.1 のみ） |
+| `grounding_type` | enum | `none` | `none` / `text` / `image` / `both`（Grounding 対応モデル: `NanoBanana2.1` / `Flash3.1` / `Pro3`） |
+| `thinking_mode` | enum | `medium` | `minimal` / `medium` / `high`（Thinking 対応モデル: `NanoBanana2.1` は3値すべて対応。`Flash3.1` / `Pro3` は `minimal` / `high` のみで、非対応値は各モデルの既定値にフォールバック） |
 | `include_thoughts` | boolean | `false` | メタデータ有効時にモデルの推論フィールドを返す |
 | `include_metadata` | boolean | `false` | JSON 出力に grounding / reasoning メタデータを含める |
-| `referenceImages` | array | `[]` | 最大 14 ファイル（Flash3.1/Pro3/Lite3.1）、Flash2.5 は 3 枚 |
+| `referenceImages` | array | `[]` | 最大 14 ファイル（`NanoBanana2.1` / `Flash3.1` / `Pro3` / `Lite3.1`）、`Flash2.5` は 3 枚 |
 | `debug` | boolean | `false` | デバッグ用途の中間ファイルを保存 |
 
 ## mcp-alphabanana を選ぶ理由
@@ -144,14 +145,14 @@ Claude Desktop では、中〜大きめの画像は `outputType=file` を優先�
 
 ## 主な機能
 
-- **超高速画像生成**（Gemini 3.1 Flash、0.5K/1K/2K/4K）
+- **Nano Banana 2.1 を既定に**（`gemini-nano-banana-2.1`、出力 1K/2K/4K）
 - **Nano Banana 2 Lite** (`Lite3.1`): 素早いドラフト作成や低レイテンシな反復試行に適した、超高速かつコスト効率の高い 1K 専用モデル
 - **高度なマルチ画像推論**（参照画像を最大 14 枚）
-- **Thinking / Grounding 対応**（Flash3.1 のみ）
+- **Thinking / Grounding 対応**（`NanoBanana2.1` / `Flash3.1` / `Pro3`）
 - **透過 PNG / WebP 出力**（カラーキー後処理 + デスピル）
 - **複数の出力形式**: file / base64 / combine
 - **柔軟なリサイズモード**: crop / stretch / letterbox / contain
-- **複数モデルティア**: Flash3.1 / Flash2.5 / Pro3 / 互換エイリアス
+- **複数モデルティア**: NanoBanana2.1（既定） / Flash3.1（非推奨） / Lite3.1 / Flash2.5 / Pro3 / 互換エイリアス
 
 ## 出力サンプル
 
@@ -216,7 +217,7 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 ```json
 {
   "prompt": "金の縁取りがある木製のピクセルアート宝箱",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "chest",
   "outputType": "base64",
   "outputWidth": 64,
@@ -230,24 +231,24 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 ```json
 {
   "prompt": "バナナのマスコットが入ったフラットなアプリアイコン",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "banana-icon-native",
   "outputType": "base64",
   "noresize": true,
   "aspectRatio": "1:1",
-  "output_resolution": "0.5K",
+  "output_resolution": "1K",
   "output_format": "png"
 }
 ```
 
-このモードでは、指定したアスペクト比と解像度に対応する Gemini ネイティブのピクセルサイズをそのまま返します。たとえば `1:1` + `0.5K` なら `512x512` がリサイズなしで返ります。
+このモードでは、指定したアスペクト比と解像度に対応する Gemini ネイティブのピクセルサイズをそのまま返します。たとえば `1:1` + `1K` なら `1024x1024` がリサイズなしで返ります。（`0.5K` は v1.6.0 で削除されました。）
 
 #### 応用例（縦型ポスター + Thinking）
 
 ```json
 {
   "prompt": "ヨーロッパの黄金色の夕暮れの田園風景の上を翼を広げた若いカップルが手をつないで飛ぶ、縦型フォトリアル旅行ポスター。ブドウ畑・村・森・川・丘の上の中世の城が広がる風景。上部に大きな見出し FLY THE COUNTRYSIDE、下部に Magical Wings Day Tours のブランド表記。",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "output_resolution": "1K",
   "outputFileName": "photoreal-travel-poster",
   "outputType": "file",
@@ -265,7 +266,7 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 ```json
 {
   "prompt": "クアラルンプールの今日の天気と主要スカイラインを盛り込んだモダンな旅行ポスター",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "kl_travel_poster",
   "outputType": "base64",
   "outputWidth": 1024,
@@ -284,8 +285,8 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 ```json
 {
   "prompt": "参照画像を使って、コインと財宝で満たされた開いた宝箱を映すゲーム画面を生成して。8ビットダンジョンクローラーのスタイル、バトル報酬シーン、ダンジョン回廊の背景、画面下部に4人パーティのステータスUI",
-  "model": "Flash3.1",
-  "output_resolution": "0.5K",
+  "model": "NanoBanana2.1",
+  "output_resolution": "1K",
   "outputFileName": "reference-image-dungeon-loot",
   "outputType": "file",
   "outputPath": "/path/to/output",
@@ -305,8 +306,10 @@ VS Code 設定（`.vscode/settings.json` またはユーザー設定）に追加
 ## 透過と出力形式
 
 - **PNG**: 完全アルファ対応、カラーキー + デスピル
-- **WebP**: 完全アルファ対応、より高い圧縮効率（Flash3.1 以降）
+- **WebP**: 完全アルファ対応、より高い圧縮効率
 - **JPEG**: 透過非対応（不透明背景にフォールバック）
+
+> Nano Banana 2.1 はネイティブな透過出力に対応していません。`transparent=true` を指定すると、mcp-alphabanana がローカル後処理でアルファチャンネルを生成します。
 
 ## 開発
 

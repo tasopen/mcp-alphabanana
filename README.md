@@ -10,7 +10,7 @@ mcp-alphabanana is a Model Context Protocol (MCP) server for generating image as
 Keywords: MCP server, Model Context Protocol, Gemini AI, image generation, FastMCP
 
 Key capabilities:
-- Ultra-fast Gemini image generation across Lite, Flash, and Pro tiers
+- Nano Banana 2.1 image generation by default, plus Lite, Flash, and Pro tiers
 - Transparent PNG/WebP asset output for web and game pipelines
 - Multi-image style guidance with local reference image files
 - Flexible file, base64, or combined outputs for agent workflows
@@ -87,27 +87,28 @@ For Claude Desktop, prefer `outputType=file` for medium or large images. `base64
 Key parameters:
 
 - `prompt` (string): description of the image to generate
-- `model`: `Flash3.1`, `Lite3.1`, `Flash2.5`, `Pro3`, `flash`, `pro`
+- `model`: `NanoBanana2.1` (default), `Flash3.1` (deprecated), `Lite3.1`, `Flash2.5`, `Pro3`, plus aliases `flash`, `pro`
 - `outputWidth` and `outputHeight`: requested final image size in pixels in normal mode
 - `noresize` + `aspectRatio` + `output_resolution`: return Gemini native size without resizing
-- `output_resolution`: `0.5K`, `1K`, `2K`, `4K`
+- `output_resolution`: `1K`, `2K`, `4K`
 - `output_format`: `png`, `jpg`, `webp`
 - `outputType`: `file`, `base64`, `combine`
 - `outputPath`: required when `outputType` is `file` or `combine`
 - `transparent`: enable transparent PNG/WebP post-processing
 - `referenceImages`: optional array of local reference image files
-- `grounding_type` and `thinking_mode`: advanced Gemini 3.1 controls
+- `grounding_type` and `thinking_mode`: advanced Gemini controls (`thinking_mode`: `minimal` / `medium` / `high`, default `medium`)
 
 ### Model Selection
 
 | Input Model ID | Internal Model ID | Description |
 | --- | --- | --- |
-| `Flash3.1` | `gemini-3.1-flash-image` | Ultra-fast, supports Thinking/Grounding. |
+| `NanoBanana2.1` | `gemini-nano-banana-2.1` | **Default.** Google Nano Banana 2.1. Best overall quality, prompt adherence, text rendering, and reference-image handling. 1K/2K/4K, up to 14 reference images. |
+| `Flash3.1` | `gemini-3.1-flash-image` | **Deprecated.** Ultra-fast, supports Thinking/Grounding. Google shuts it down on October 29, 2026; requests are rejected from that date. Migrate to `NanoBanana2.1`. |
 | `Lite3.1` | `gemini-3.1-flash-lite-image` | Ultra-fast, cost-effective 1K-only model. No Search Grounding. |
-| `Flash2.5` | `gemini-2.5-flash-image` | Legacy Flash. High stability. Low cost. |
+| `Flash2.5` | `gemini-2.5-flash-image` | Legacy Flash. High stability. Low cost. 1K only. |
 | `Pro3` | `gemini-3-pro-image` | High-fidelity Pro model. |
-| `flash` | `gemini-3.1-flash-image` | Alias for backward compatibility. |
-| `pro` | `gemini-3-pro-image` | Alias for backward compatibility. |
+| `flash` | `gemini-nano-banana-2.1` | Alias for the default model (`NanoBanana2.1`). |
+| `pro` | `gemini-3-pro-image` | Alias for `Pro3`. |
 
 ### Parameters
 
@@ -118,8 +119,8 @@ Full parameter reference for the `generate_image` tool.
 | `prompt` | string | *required* | Description of the image to generate |
 | `outputFileName` | string | *required* | Output filename (extension auto-added if missing) |
 | `outputType` | enum | `combine` | `file`, `base64`, or `combine` |
-| `model` | enum | `Flash3.1` | Model: `Flash3.1`, `Lite3.1`, `Flash2.5`, `Pro3`, `flash`, `pro` |
-| `output_resolution` | enum | auto | `0.5K`, `1K`, `2K`, `4K`; required when `noresize=true` |
+| `model` | enum | `NanoBanana2.1` | Model: `NanoBanana2.1`, `Flash3.1`, `Lite3.1`, `Flash2.5`, `Pro3`, `flash`, `pro` |
+| `output_resolution` | string | auto | `1K`, `2K`, `4K` (`0.5K` removed in v1.6.0); required when `noresize=true` |
 | `noresize` | boolean | `false` | Skip post-generation resize and return Gemini native dimensions |
 | `aspectRatio` | enum | optional | Required when `noresize=true`; e.g. `1:1`, `16:9`, `4:5` |
 | `outputWidth` | integer | required unless `noresize=true` | Final output width in pixels |
@@ -131,11 +132,11 @@ Full parameter reference for the `generate_image` tool.
 | `colorTolerance` | integer | `30` | Transparency color matching tolerance |
 | `fringeMode` | enum | `auto` | `auto`, `crisp`, `hd` |
 | `resizeMode` | enum | `crop` | `crop`, `stretch`, `letterbox`, `contain` |
-| `grounding_type` | enum | `none` | `none`, `text`, `image`, `both` (Flash3.1 only) |
-| `thinking_mode` | enum | `minimal` | `minimal`, `high` (Flash3.1 only) |
+| `grounding_type` | enum | `none` | `none`, `text`, `image`, `both` (grounding-capable models: `NanoBanana2.1`, `Flash3.1`, `Pro3`) |
+| `thinking_mode` | enum | `medium` | `minimal`, `medium`, `high` (thinking-capable models: `NanoBanana2.1` accepts all three; `Flash3.1`/`Pro3` accept `minimal`/`high` and fall back to their own default otherwise) |
 | `include_thoughts` | boolean | `false` | Return model reasoning fields when metadata is enabled |
 | `include_metadata` | boolean | `false` | Include grounding and reasoning metadata in JSON output |
-| `referenceImages` | array | `[]` | Up to 14 local reference files (Flash3.1/Pro3/Lite3.1), 3 for Flash2.5 |
+| `referenceImages` | array | `[]` | Up to 14 local reference files (`NanoBanana2.1`/`Flash3.1`/`Pro3`/`Lite3.1`), 3 for `Flash2.5` |
 | `debug` | boolean | `false` | Save intermediate debug artifacts |
 
 ## Why alphabanana?
@@ -146,14 +147,14 @@ Full parameter reference for the `generate_image` tool.
 
 ## Features
 
-- **Ultra-fast image generation** (Gemini 3.1 Flash, 0.5K/1K/2K/4K)
+- **Nano Banana 2.1 default** (`gemini-nano-banana-2.1`, 1K/2K/4K output)
 - **Nano Banana 2 Lite** (`Lite3.1`): ultra-fast, cost-effective 1K-only model for quick drafting and low-latency iteration
 - **Advanced multi-image reasoning** (up to 14 reference images)
-- **Thinking/Grounding support** (Flash3.1 only)
+- **Thinking/Grounding support** (`NanoBanana2.1`, `Flash3.1`, `Pro3`)
 - **Transparent PNG/WebP output** (color-key post-processing, despill)
 - **Multiple output formats**: file, base64, or both
 - **Flexible resize modes**: crop, stretch, letterbox, contain
-- **Multiple model tiers**: Flash3.1, Lite3.1, Flash2.5, Pro3, legacy aliases
+- **Multiple model tiers**: NanoBanana2.1 (default), Flash3.1 (deprecated), Lite3.1, Flash2.5, Pro3, legacy aliases
 
 ## Example Outputs
 
@@ -218,7 +219,7 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
 ```json
 {
   "prompt": "A pixel art treasure chest, golden trim, wooden texture",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "chest",
   "outputType": "base64",
   "outputWidth": 64,
@@ -232,24 +233,24 @@ Add to your VS Code settings (`.vscode/settings.json` or user settings), configu
 ```json
 {
   "prompt": "A clean app icon with a banana mascot, flat graphic design",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "banana-icon-native",
   "outputType": "base64",
   "noresize": true,
   "aspectRatio": "1:1",
-  "output_resolution": "0.5K",
+  "output_resolution": "1K",
   "output_format": "png"
 }
 ```
 
-This mode returns the Gemini native pixel size for the requested ratio and resolution. For example, `1:1` + `0.5K` returns `512x512` without any resize pass.
+This mode returns the Gemini native pixel size for the requested ratio and resolution. For example, `1:1` + `1K` returns `1024x1024` without any resize pass. (`0.5K` was removed in v1.6.0.)
 
 #### Advanced (Vertical poster and thinking)
 
 ```json
 {
   "prompt": "A vertical, photorealistic travel poster advertising Magical Wings Day Tours. A joyful young couple flies high above a breathtaking European countryside at golden hour, holding hands as they soar through a partly cloudy sky. Below them are vineyards, villages, forests, a winding river, and a hilltop medieval castle. The poster uses large, elegant typography with the headline FLY THE COUNTRYSIDE at the top and Magical Wings Day Tours branding near the bottom.",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "output_resolution": "1K",
   "outputFileName": "photoreal-travel-poster",
   "outputType": "file",
@@ -267,7 +268,7 @@ This mode returns the Gemini native pixel size for the requested ratio and resol
 ```json
 {
   "prompt": "A modern travel poster featuring today's weather and skyline highlights in Kuala Lumpur",
-  "model": "Flash3.1",
+  "model": "NanoBanana2.1",
   "outputFileName": "kl_travel_poster",
   "outputType": "base64",
   "outputWidth": 1024,
@@ -286,8 +287,8 @@ This sample enables Google Search grounding and returns grounding and reasoning 
 ```json
 {
   "prompt": "Use the reference image to create a game screen showing an opened treasure chest filled with coins and treasure, 8-bit dungeon crawler style, after-battle reward scene, dungeon corridor background, four-party status UI at the bottom",
-  "model": "Flash3.1",
-  "output_resolution": "0.5K",
+  "model": "NanoBanana2.1",
+  "output_resolution": "1K",
   "outputFileName": "reference-image-dungeon-loot",
   "outputType": "file",
   "outputPath": "/path/to/output",
@@ -307,8 +308,10 @@ This sample enables Google Search grounding and returns grounding and reasoning 
 ## Transparency & Output Formats
 
 - **PNG**: Full alpha, color-key + despill
-- **WebP**: Full alpha, better compression (Flash3.1+)
+- **WebP**: Full alpha, better compression
 - **JPEG**: No transparency (falls back to solid background)
+
+> Nano Banana 2.1 does not provide native transparent output. When `transparent=true` is specified, mcp-alphabanana applies local post-processing to generate an alpha channel.
 
 ## Development
 

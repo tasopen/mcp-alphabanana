@@ -33,12 +33,22 @@ const SERVER_VERSION = /^\d+\.\d+\.\d+$/.test(PACKAGE_VERSION.version ?? '')
   : '0.0.0';
 
 import {
-  GEMINI_RESOLUTION_KEYS,
   SUPPORTED_ASPECT_RATIO_KEYS,
   getGeminiNativeSize,
   selectAspectRatio,
   type AspectRatioKey,
 } from './utils/aspect-ratio.js';
+import {
+  DEFAULT_MODEL,
+  DEFAULT_THINKING_LEVEL,
+  MODEL_ENUM_VALUES,
+  THINKING_LEVELS,
+  clampResolutionToModel,
+  formatResolutionList,
+  getMaxReferenceImages,
+  isResolutionSupported,
+} from './config/model-config.js';
+import { resolveModel } from './model-resolver.js';
 import {
   generateWithGemini,
   type GroundingType,
@@ -89,12 +99,13 @@ const GenerateImageParams = z.object({
     .describe('Output format: file=file only, base64=base64 only, combine=both. In Claude Desktop, prefer file for medium or large images to avoid context-size limits; use base64 only for small previews.'),
 
   // Model settings (REQUIRED - affects cost and capabilities)
-    // See tool description for model details. 'flash' and 'pro' are aliases for Flash2.5 and Pro3, kept for compatibility.
-    model: z.enum(['Flash3.1', 'Lite3.1', 'Flash2.5', 'Pro3', 'flash', 'pro']).default('Flash3.1')
-      .describe('Model tier to use for generation (see tool description for details; "flash" and "pro" are aliases for Flash2.5 and Pro3; "Lite3.1" is the low-latency Nano Banana 2 Lite model, 1K-only, no grounding)'),
+    // Model list and default are derived from src/config/model-config.ts (single source of truth).
+    model: z.enum(MODEL_ENUM_VALUES).default(DEFAULT_MODEL)
+      .describe(`Model tier to use for generation (default: ${DEFAULT_MODEL}; see tool description for details; "flash" resolves to ${DEFAULT_MODEL}, "pro" to Pro3; "Lite3.1" is the low-latency Nano Banana 2 Lite model, 1K-only, no grounding; "Flash3.1" is deprecated — Google shuts it down on October 29, 2026)`),
     // output_resolution is normally auto-calculated from pixel size; set only to intentionally override.
-    output_resolution: z.enum(GEMINI_RESOLUTION_KEYS).optional()
-      .describe('Gemini generation source resolution (optional in normal mode, required when noresize=true). In normal mode, the final image is resized to the requested pixel size after generation.'),
+    // Validated against the central model configuration (0.5K was removed in v1.6.0).
+    output_resolution: z.string().optional()
+      .describe(`Gemini generation source resolution: ${formatResolutionList()} (optional in normal mode, required when noresize=true; 0.5K was removed in v1.6.0). In normal mode, the final image is resized to the requested pixel size after generation.`),
 
   // Native-size mode
   noresize: z.boolean().default(false)
@@ -131,11 +142,11 @@ const GenerateImageParams = z.object({
 
   // Advanced 3.1 features
   grounding_type: z.enum(['none', 'text', 'image', 'both']).default('none')
-    .describe('Grounding tool usage (3.1 only)'),
-  thinking_mode: z.enum(['minimal', 'high']).default('minimal')
-    .describe('Thinking mode (3.1 only)'),
+    .describe('Grounding tool usage (requires a grounding-capable model; see [Model Guidance] in the tool description)'),
+  thinking_mode: z.enum(THINKING_LEVELS).default(DEFAULT_THINKING_LEVEL)
+    .describe(`Thinking level: minimal, medium, high (default: ${DEFAULT_THINKING_LEVEL}, matching NanoBanana2.1's model default; requires a thinking-capable model — NanoBanana2.1 accepts all three levels, Flash3.1/Pro3 accept minimal/high and fall back to their own default otherwise)`),
   include_thoughts: z.boolean().default(false)
-    .describe('Optional (default: false). Request thought fields from Gemini (3.1 only). Thought content is returned in MCP response only when include_metadata=true.'),
+    .describe('Optional (default: false). Request thought fields from Gemini (thinking-capable models only). Thought content is returned in MCP response only when include_metadata=true.'),
   include_metadata: z.boolean().default(false)
     .describe('Include grounding and reasoning metadata in JSON output (optional, may increase payload size).'),
 
@@ -143,7 +154,7 @@ const GenerateImageParams = z.object({
   referenceImages: z.array(z.object({
     description: z.string().optional(),
     filePath: z.string().describe('Absolute path to reference image file (.png, .jpg, .jpeg, .webp). In Claude Desktop on Windows, use the FileSystem extension to locate the file and pass its Windows absolute path.'),
-  })).max(14).default([]).describe('Reference images for style guidance (Flash2.5: max 3, others: max 14)'),
+  })).max(getMaxReferenceImages()).default([]).describe(`Reference images for style guidance (max ${getMaxReferenceImages()} files; per-model limits are enforced automatically)`),
 
   // Debug
   debug: z.boolean().default(false)
@@ -184,6 +195,16 @@ const GenerateImageParams = z.object({
         message: 'outputHeight is required unless noresize=true',
       });
     }
+  }
+
+  // v1.6.0: output_resolution must be one of the supported resolutions (0.5K removed).
+  // The allowed list comes from the central model configuration.
+  if (args.output_resolution !== undefined && !isResolutionSupported(args.output_resolution)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['output_resolution'],
+      message: `Invalid output_resolution: ${args.output_resolution}. Supported resolutions are ${formatResolutionList()}.`,
+    });
   }
 
   if (needsOutputPath && !args.outputPath) {
@@ -244,7 +265,7 @@ const server = new FastMCP({
 // Register the generate_image tool
 server.addTool({
   name: 'generate_image',
-  description: `Generate image assets using Gemini AI with optional transparency and reference images.\n\n[Claude Desktop Guidance]\n- Prefer outputType='file' for medium or large images. base64 and combine responses can exceed Claude Desktop's context limit.\n- On Claude Desktop for Windows, use the FileSystem extension to choose reference-image paths and a writable absolute outputPath before calling this tool.\n- Use base64 only for small previews or when the client explicitly needs inline image data.\n\n[Model Guidance]\n- Flash3.1 (recommended): High quality, very fast, supports grounding and advanced features.\n- Lite3.1 (Nano Banana 2 Lite): Ultra-fast, cost-effective, 1K-only, no search grounding. Ideal for quick drafting and low-latency iteration.\n- Pro3: Higher fidelity, but more costly and slower.\n- Flash2.5: Legacy, maintained for compatibility. Does not support 0.5K, 2K, or 4K resolutions.\n\n[Aspect Ratios]\nGemini supports the following aspect ratios (model-dependent):\n- Common to all models: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9\n- Flash3.1 only: 1:4, 4:1, 1:8, 8:1\n\nNormal mode: provide outputWidth/outputHeight and the server will choose the closest Gemini aspect ratio and source resolution, then resize to the requested pixel size.\nNo-resize mode: set noresize=true and provide aspectRatio plus output_resolution. The server will return Gemini's native pixel dimensions for that combination without post-generation resizing.\n\nIf you intentionally want to control resizing/cropping in normal mode, use the 'resizeMode' parameter: 'crop' (default, center crop), 'letterbox' (fit with padding), 'contain' (trim transparent margins then fit), or 'stretch' (distort to fit).\n\n[IMPORTANT]\nAlways preserve the user's prompt as-is, including language and nuance. Do not translate or summarize.`,
+  description: `Generate image assets using Gemini AI with optional transparency and reference images.\n\n[Claude Desktop Guidance]\n- Prefer outputType='file' for medium or large images. base64 and combine responses can exceed Claude Desktop's context limit.\n- On Claude Desktop for Windows, use the FileSystem extension to choose reference-image paths and a writable absolute outputPath before calling this tool.\n- Use base64 only for small previews or when the client explicitly needs inline image data.\n\n[Model Guidance]\n- NanoBanana2.1 (default): Google Nano Banana 2.1 (gemini-nano-banana-2.1). Best overall quality, prompt adherence, character consistency, text rendering and reference-image handling. Supports 1K/2K/4K and up to 14 reference images, plus thinking and grounding.\n- Flash3.1 (deprecated): gemini-3.1-flash-image. Google shuts it down on October 29, 2026; requests are rejected from that date. Please migrate to NanoBanana2.1.\n- Lite3.1 (Nano Banana 2 Lite): Ultra-fast, cost-effective, 1K-only, no search grounding. Ideal for quick drafting and low-latency iteration.\n- Pro3: Higher fidelity, but more costly and slower.\n- Flash2.5: Legacy, maintained for compatibility. 1K only.\nAliases: 'flash' resolves to NanoBanana2.1 (the default), 'pro' to Pro3.\n\n[Thinking]\nthinking_mode accepts minimal, medium, high (default: medium, matching NanoBanana2.1's model default). NanoBanana2.1 supports all three levels; Flash3.1 and Pro3 support minimal/high and fall back to their own default when given an unsupported level.\n\n[Resolutions]\noutput_resolution supports 1K, 2K and 4K (0.5K was removed in v1.6.0). It is auto-selected from the requested pixel size in normal mode.\n\n[Aspect Ratios]\nGemini supports the following aspect ratios (model-dependent):\n- Common to all models: 1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9\n- Flash3.1 only: 1:4, 4:1, 1:8, 8:1\n\nNormal mode: provide outputWidth/outputHeight and the server will choose the closest Gemini aspect ratio and source resolution, then resize to the requested pixel size.\nNo-resize mode: set noresize=true and provide aspectRatio plus output_resolution. The server will return Gemini's native pixel dimensions for that combination without post-generation resizing.\n\nIf you intentionally want to control resizing/cropping in normal mode, use the 'resizeMode' parameter: 'crop' (default, center crop), 'letterbox' (fit with padding), 'contain' (trim transparent margins then fit), or 'stretch' (distort to fit).\n\n[IMPORTANT]\nAlways preserve the user's prompt as-is, including language and nuance. Do not translate or summarize.`,
   parameters: GenerateImageParams,
   annotations: {
     title: 'Image Generator',
@@ -256,6 +277,30 @@ server.addTool({
     try {
       log.info('Starting image generation', { prompt: args.prompt });
       const usesNativeSize = args.noresize === true;
+
+      // Resolve model (alias → canonical → MODEL_CONFIG) and validate lifecycle.
+      // On/after the shutdown date the request is rejected before any Gemini API call.
+      const modelResolution = resolveModel(args.model);
+      if (!modelResolution.ok) {
+        log.error('Model resolution failed', { model: args.model, error: modelResolution.error });
+        return {
+          content: [
+            {
+              type: 'text' as const, text: JSON.stringify({
+                success: false,
+                message: modelResolution.error,
+                width: 0,
+                height: 0,
+                format: ''
+              })
+            },
+          ],
+        };
+      }
+      const modelWarning = modelResolution.warning;
+      if (modelWarning) {
+        log.warn('Deprecated model requested', { model: args.model, warning: modelWarning });
+      }
 
       // Validate: outputPath is required for file and combine output types
       if ((args.outputType === 'file' || args.outputType === 'combine') && !args.outputPath) {
@@ -272,11 +317,6 @@ server.addTool({
             },
           ],
         };
-      }
-
-      // Validate: 4K only available with pro tier (send as-is per spec, but log warning)
-      if (args.output_resolution === '4K' && (args.model === 'Flash3.1' || args.model === 'Flash2.5' || args.model === 'flash')) {
-        log.warn('4K resolution requested with flash tier - sending as-is to API');
       }
 
       // Validate: transparency with JPG
@@ -305,8 +345,8 @@ server.addTool({
         }
       }
 
-      // Validate reference image count
-      const maxRefs = args.model === 'Flash2.5' ? 3 : 14;
+      // Validate reference image count (limit comes from MODEL_CONFIG)
+      const maxRefs = modelResolution.config.capabilities.maxReferenceImages;
       if (referenceImages.length > maxRefs) {
         log.warn(`Too many reference images (${referenceImages.length}), truncating to ${maxRefs}`);
         referenceImages.splice(maxRefs);
@@ -321,10 +361,16 @@ server.addTool({
         sourceResolution = selectSourceResolutionSmart(args.outputWidth!, args.outputHeight!, aspectRatio);
         log.info('Auto-selected sourceResolution', { sourceResolution });
       }
-      // Pro3 does not support 0.5K — fall back to 1K before calculating output size
-      if ((args.model === 'Pro3' || args.model === 'pro') && sourceResolution === '0.5K') {
-        log.warn('Pro3 does not support 0.5K resolution, falling back to 1K');
-        sourceResolution = '1K';
+      // Clamp to a resolution the selected model supports (capabilities come from MODEL_CONFIG).
+      const supportedResolutions = modelResolution.config.capabilities.supportedResolutions;
+      if (!supportedResolutions.includes(sourceResolution)) {
+        const clamped = clampResolutionToModel(sourceResolution, supportedResolutions);
+        log.warn('Resolution not supported by selected model - clamping', {
+          model: modelResolution.key,
+          requested: sourceResolution,
+          using: clamped,
+        });
+        sourceResolution = clamped;
       }
       const outputSize = usesNativeSize
         ? getGeminiNativeSize(aspectRatio, sourceResolution)
@@ -448,6 +494,7 @@ server.addTool({
         format: args.output_format,
         mimeType,
         message: `Image generated successfully.${transparencyWarning}`,
+        warning: modelWarning,
       };
 
       // Debug: include prompt
@@ -517,7 +564,8 @@ server.addTool({
             await fs.writeFile(fallbackFullPath, processedBuffer);
 
             result.filePath = fallbackFullPath;
-            result.warning = `Requested path not writable; saved to fallback: ${fallbackFullPath}`;
+            const fallbackWarning = `Requested path not writable; saved to fallback: ${fallbackFullPath}`;
+            result.warning = result.warning ? `${result.warning} ${fallbackWarning}` : fallbackWarning;
             log.warn('Saved output to fallback', { fallback: fallbackFullPath });
 
             // If debug mode, include fallback info in message

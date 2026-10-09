@@ -5,10 +5,15 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest';
 import { callToolAndParse, closeMcpClient, createMcpClient } from './helpers/mcp-client.js';
 import { ensureReferenceImage } from './helpers/fixtures.js';
 import { fallbackDir, outputDir } from './helpers/paths.js';
+import { MODEL_CONFIG } from '../src/config/model-config.js';
+import { isShutdownReached } from '../src/model-resolver.js';
 
 const hasApiKey = Boolean(process.env.GEMINI_API_KEY);
 const unwritablePath = process.env.MCP_TEST_UNWRITABLE_PATH;
 const hasFallbackPath = Boolean(unwritablePath && path.isAbsolute(unwritablePath));
+// Flash3.1 API tests only run while the model is still served by Google.
+const flash31ShutdownDate = MODEL_CONFIG['Flash3.1'].shutdownDate!;
+const flash31Available = !isShutdownReached(flash31ShutdownDate, new Date());
 
 describe('mcp-alphabanana full', () => {
   let handle: Awaited<ReturnType<typeof createMcpClient>> | null = null;
@@ -58,7 +63,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A flat red square icon with a white border.',
-        model: 'Flash3.1',
         outputFileName: 'full_base64',
         outputType: 'base64',
         outputWidth: 32,
@@ -84,7 +88,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A minimal green triangle with a simple outline.',
-        model: 'Flash3.1',
         outputFileName: 'full_combine',
         outputType: 'combine',
         outputWidth: 48,
@@ -114,7 +117,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple yellow star with a solid background.',
-        model: 'Flash3.1',
         outputFileName: 'full_jpg',
         outputType: 'base64',
         outputWidth: 32,
@@ -164,7 +166,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A placeholder icon for validation.',
-        model: 'Flash3.1',
         outputFileName: 'full_relative',
         outputType: 'file',
         outputWidth: 32,
@@ -188,7 +189,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'Create an original tiny banana icon using the reference image only as loose inspiration for the blue color palette. Do not reproduce the reference image composition.',
-        model: 'Flash3.1',
         outputFileName: 'full_reference',
         outputType: 'base64',
         outputWidth: 32,
@@ -234,16 +234,18 @@ describe('mcp-alphabanana full', () => {
     expect(parsed.mimeType).toBe('image/png');
   });
 
-  test.runIf(hasApiKey)('Pro3 falls back to 1K when 0.5K is explicitly requested', async () => {
+  // v1.6.0: 0.5K was removed. The rejection happens in validation, before any API call,
+  // so this test does not require GEMINI_API_KEY.
+  test('0.5K output_resolution is rejected with an explicit validation error', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
     const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A simple blue square icon.',
-        model: 'Pro3',
+        model: 'NanoBanana2.1',
         output_resolution: '0.5K',
-        outputFileName: 'full_pro_05k_fallback',
+        outputFileName: 'full_05k_rejected',
         outputType: 'base64',
         outputWidth: 32,
         outputHeight: 32,
@@ -252,18 +254,20 @@ describe('mcp-alphabanana full', () => {
       },
     };
 
-    const { parsed } = await callToolAndParse(handle.client, request, {
-      testName: 'full: Pro3 falls back to 1K when 0.5K is explicitly requested',
-    });
-    expect(parsed.success).toBe(true);
-    expect(parsed.base64).toBeTruthy();
-    expect(parsed.mimeType).toBe('image/png');
-    // Output is resized to 32x32 regardless of source resolution
-    expect(parsed.width).toBe(32);
-    expect(parsed.height).toBe(32);
+    let message = '';
+    try {
+      await callToolAndParse(handle.client, request, {
+        testName: 'full: 0.5K output_resolution is rejected',
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(message).toContain('Invalid output_resolution: 0.5K');
+    expect(message).toContain('Supported resolutions are 1K, 2K, and 4K');
   });
 
-  test.runIf(hasApiKey)('Pro3 noresize with 0.5K falls back to 1K native dimensions', async () => {
+  test.runIf(hasApiKey)('Pro3 noresize with 1K returns 1K native dimensions', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
     const request = {
@@ -271,37 +275,36 @@ describe('mcp-alphabanana full', () => {
       arguments: {
         prompt: 'A simple purple star icon on a white background.',
         model: 'Pro3',
-        outputFileName: 'full_pro_05k_noresize_fallback',
+        outputFileName: 'full_pro_1k_noresize',
         outputType: 'base64',
         noresize: true,
         aspectRatio: '1:1',
-        output_resolution: '0.5K',
+        output_resolution: '1K',
         output_format: 'png',
         transparent: false,
       },
     };
 
     const { parsed } = await callToolAndParse(handle.client, request, {
-      testName: 'full: Pro3 noresize with 0.5K falls back to 1K native dimensions',
+      testName: 'full: Pro3 noresize with 1K returns 1K native dimensions',
     });
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
-    // 0.5K is not supported by Pro3, so it falls back to 1K (1024x1024 for 1:1)
+    // 1K 1:1 native dimensions are 1024x1024
     expect(parsed.width).toBe(1024);
     expect(parsed.height).toBe(1024);
   });
 
-  test.runIf(hasApiKey)('pro alias falls back from 0.5K to 1K', async () => {
+  test.runIf(hasApiKey && flash31Available)('Flash3.1 still generates before shutdown and returns a deprecation warning', async () => {
     if (!handle) throw new Error('MCP client not initialized');
 
     const request = {
       name: 'generate_image',
       arguments: {
-        prompt: 'A simple green circle icon.',
-        model: 'pro',
-        output_resolution: '0.5K',
-        outputFileName: 'full_pro_alias_05k_fallback',
+        prompt: 'A simple red heart icon on a white background.',
+        model: 'Flash3.1',
+        outputFileName: 'full_flash31_deprecated',
         outputType: 'base64',
         outputWidth: 32,
         outputHeight: 32,
@@ -311,13 +314,71 @@ describe('mcp-alphabanana full', () => {
     };
 
     const { parsed } = await callToolAndParse(handle.client, request, {
-      testName: 'full: pro alias falls back from 0.5K to 1K',
+      testName: 'full: Flash3.1 deprecation warning before shutdown',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+    // Migration warning surfaced while the request is still allowed.
+    expect(parsed.warning).toContain('Flash3.1 (gemini-3.1-flash-image) is deprecated.');
+    expect(parsed.warning).toContain('Please migrate to NanoBanana2.1.');
+  });
+
+  test.runIf(hasApiKey)('flash alias resolves to NanoBanana2.1 and generates', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A simple green circle icon.',
+        model: 'flash',
+        outputFileName: 'full_flash_alias',
+        outputType: 'base64',
+        outputWidth: 32,
+        outputHeight: 32,
+        output_format: 'png',
+        transparent: false,
+      },
+    };
+
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: flash alias resolves to NanoBanana2.1 and generates',
     });
     expect(parsed.success).toBe(true);
     expect(parsed.base64).toBeTruthy();
     expect(parsed.mimeType).toBe('image/png');
     expect(parsed.width).toBe(32);
     expect(parsed.height).toBe(32);
+    // The default model is stable: no deprecation warning.
+    expect(parsed.warning).toBeUndefined();
+  });
+
+  test.runIf(hasApiKey)('thinking_mode medium is accepted by NanoBanana2.1', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const request = {
+      name: 'generate_image',
+      arguments: {
+        prompt: 'A simple orange diamond icon on a white background.',
+        model: 'NanoBanana2.1',
+        thinking_mode: 'medium',
+        outputFileName: 'full_thinking_medium',
+        outputType: 'base64',
+        outputWidth: 32,
+        outputHeight: 32,
+        output_format: 'png',
+        transparent: false,
+        include_metadata: true,
+      },
+    };
+
+    const { parsed } = await callToolAndParse(handle.client, request, {
+      testName: 'full: thinking_mode medium is accepted by NanoBanana2.1',
+    });
+    expect(parsed.success).toBe(true);
+    expect(parsed.base64).toBeTruthy();
+    expect(parsed.mimeType).toBe('image/png');
+    expect(parsed.metadata?.reasoning?.mode).toBe('medium');
   });
 
   test.runIf(hasApiKey)('Lite3.1 forces 1K resolution when 2K requested', async () => {
@@ -416,7 +477,6 @@ describe('mcp-alphabanana full', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A gray circle used for fallback testing.',
-        model: 'Flash3.1',
         outputFileName: 'full_fallback',
         outputType: 'file',
         outputWidth: 32,

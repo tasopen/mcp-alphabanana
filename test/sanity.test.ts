@@ -46,8 +46,26 @@ describe('mcp-alphabanana sanity', () => {
     expect(generateTool?.name).toBe('generate_image');
   });
 
-  test('native Gemini size lookup matches square 0.5K output', () => {
-    expect(getGeminiNativeSize('1:1', '0.5K')).toEqual({ width: 512, height: 512 });
+  test('native Gemini size lookup matches square 1K output', () => {
+    expect(getGeminiNativeSize('1:1', '1K')).toEqual({ width: 1024, height: 1024 });
+  });
+
+  test('tool schema exposes canonical models, aliases, and the default model', async () => {
+    if (!handle) throw new Error('MCP client not initialized');
+
+    const tools = await handle.client.listTools();
+    const generateTool = tools.tools.find((t) => t.name === 'generate_image');
+    const modelSchema = (generateTool?.inputSchema as any)?.properties?.model;
+
+    expect(Array.isArray(modelSchema?.enum)).toBe(true);
+    expect(modelSchema.enum).toEqual(
+      expect.arrayContaining(['NanoBanana2.1', 'Flash3.1', 'Lite3.1', 'Flash2.5', 'Pro3', 'flash', 'pro'])
+    );
+    expect(modelSchema.default).toBe('NanoBanana2.1');
+
+    const thinkingSchema = (generateTool?.inputSchema as any)?.properties?.thinking_mode;
+    expect(thinkingSchema?.enum).toEqual(['minimal', 'medium', 'high']);
+    expect(thinkingSchema?.default).toBe('medium');
   });
 
 
@@ -75,13 +93,13 @@ describe('mcp-alphabanana sanity', () => {
     expect(parsed.mimeType).toBe('image/png');
   });
 
-  test.runIf(hasApiKey)('Flash3.1 minimal image generation', async () => {
+  test.runIf(hasApiKey)('default model (NanoBanana2.1) minimal image generation', async () => {
     if (!handle) throw new Error('MCP client not initialized');
     const request = {
       name: 'generate_image',
       arguments: {
         prompt: 'A tiny pixel art red apple game icon with a single green leaf, centered on a plain light gray background.',
-        model: 'Flash3.1',
+        // `model` omitted on purpose: exercises the configured default model.
         outputFileName: 'sanity_icon',
         outputType: 'file',
         outputWidth: 32,
@@ -92,7 +110,7 @@ describe('mcp-alphabanana sanity', () => {
       },
     };
     const { parsed } = await callToolAndParse(handle.client, request, {
-      testName: 'sanity: Flash3.1 minimal image generation',
+      testName: 'sanity: default model (NanoBanana2.1) minimal image generation',
     });
     expect(parsed.success).toBe(true);
     expect(parsed.mimeType || parsed.format).toBe('image/png');
@@ -109,12 +127,11 @@ describe('mcp-alphabanana sanity', () => {
       name: 'generate_image',
       arguments: {
         prompt: 'A tiny banana mascot app icon on a clean background.',
-        model: 'Flash3.1',
         outputFileName: 'sanity_native_icon',
         outputType: 'base64',
         noresize: true,
         aspectRatio: '1:1',
-        output_resolution: '0.5K',
+        output_resolution: '1K',
         output_format: 'png',
         transparent: false,
       },
@@ -124,8 +141,8 @@ describe('mcp-alphabanana sanity', () => {
     });
     expect(parsed.success).toBe(true);
     expect(parsed.mimeType || parsed.format).toBe('image/png');
-    expect(parsed.width).toBe(512);
-    expect(parsed.height).toBe(512);
+    expect(parsed.width).toBe(1024);
+    expect(parsed.height).toBe(1024);
     expect(parsed.base64).toBeTruthy();
   });
 

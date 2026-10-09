@@ -1,15 +1,15 @@
 ---
 title: "mcp-alphabanana Specification"
-version: "1.4.3"
+version: "1.6.0"
 license: "MIT"
 node_compatibility: ">=18"
 ---
 
-# mcp-alphabanana Specification (v1.4.3, Nano Banana 2/Gemini 3.1 Flash Image)
+# mcp-alphabanana Specification (v1.6.0, Nano Banana 2.1)
 
 ## 1. Overview
 
-mcp-alphabanana is a Model Context Protocol server for generating image assets using Google Gemini AI, supporting ultra-fast 0.5K drafting, improved multi-image reasoning, thinking processes, grounding search, and an extended transparency pipeline (WebP supported).
+mcp-alphabanana is a Model Context Protocol server for generating image assets using Google Gemini AI. Google Nano Banana 2.1 (`gemini-nano-banana-2.1`) is the default model; the server supports 1K/2K/4K output, improved multi-image reasoning, thinking processes, grounding search, and an extended transparency pipeline (WebP supported).
 
 **This version is re-implemented with [FastMCP 3](https://www.npmjs.com/package/fastmcp)**, resulting in a significantly simplified codebase and flexible output format options.
 
@@ -19,6 +19,7 @@ mcp-alphabanana is a Model Context Protocol server for generating image assets u
 
 | Version | Date | Highlights |
 |---|---|---|
+| 1.6.0 | 2026-10-08 | Nano Banana 2.1 (`gemini-nano-banana-2.1`) becomes the default model; `flash` alias updated; `0.5K` removed (1K/2K/4K only); Flash3.1 deprecated with shutdown on 2026-10-29; central model configuration (`src/config/model-config.ts`) introduced. |
 | 1.4.3 | 2026-03-24 | Bump version to prepare a rebuilt MCPB bundle (repackage with updated artifacts). |
 | 1.4.2 | 2026-03-22 | Reduce npm package size by excluding image assets; improve cross-platform `.mcpb` bundling; add logo icon to README. |
 
@@ -28,11 +29,15 @@ To ensure a smooth transition for existing MCP clients (GitHub Copilot, Claude D
 
 | Input Model ID | Internal Model ID | Description |
 | --- | --- | --- |
-| `Flash3.1` | `gemini-3.1-flash-image-preview` | Ultra-fast, supports Thinking/Grounding. |
-| `Flash2.5` | `gemini-2.5-flash-image` | Legacy Flash. High stability. Low cost. Have Free Tier.|
-| `Pro3` | `gemini-3.0-pro-image-preview` | High-fidelity Pro model. |
-| `flash` | `gemini-3.1-flash-image-preview` | Alias for backward compatibility. |
-| `pro` | `gemini-3.0-pro-image-preview` | Alias for backward compatibility. |
+| `NanoBanana2.1` | `gemini-nano-banana-2.1` | **Default.** Google Nano Banana 2.1. 1K/2K/4K, up to 14 reference images, Thinking/Grounding. |
+| `Flash3.1` | `gemini-3.1-flash-image` | **Deprecated** (shutdown 2026-10-29). Ultra-fast, supports Thinking/Grounding. |
+| `Lite3.1` | `gemini-3.1-flash-lite-image` | Ultra-fast, cost-effective 1K-only model. No Search Grounding. |
+| `Flash2.5` | `gemini-2.5-flash-image` | Legacy Flash. High stability. Low cost. 1K only. |
+| `Pro3` | `gemini-3-pro-image` | High-fidelity Pro model. |
+| `flash` | `gemini-nano-banana-2.1` | Alias for the default model (`NanoBanana2.1`). |
+| `pro` | `gemini-3-pro-image` | Alias for `Pro3`. |
+
+All model metadata (public names, Google model IDs, default, aliases, lifecycle/shutdown date, capabilities, supported resolutions) is defined once in `src/config/model-config.ts` and consumed by the MCP schema, the model resolver (`src/model-resolver.ts`), and validation layers.
 
 ---
 
@@ -45,9 +50,9 @@ Parameters are aligned with the [Official Gemini Image Generation Documentation]
 The server uses a **Table-Driven Selection** logic to match the requested dimensions to valid Gemini API tiers.
 
 * **Source Resolution (`output_resolution`):**
-* `0.5K`: Max side ~512px. (Optimized for drafting).
 * `1K`: Max side ~1024px (Default).
 * `2K`, `4K`: High-resolution tiers.
+* `0.5K` was removed in v1.6.0; requests are rejected with an explicit validation error (`Invalid output_resolution: 0.5K. Supported resolutions are 1K, 2K, and 4K.`).
 
 * **New Aspect Ratios (Flash 3.1 exclusive):**
 * Standard: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`.
@@ -58,7 +63,7 @@ If a user requests `1000x240`:
 
 1. Calculate Ratio: $1000 / 240 \approx 4.16$.
 2. Match Table: Closest is `4:1`.
-3. Set Tier: If not specified, defaults to `0.5K` (512px long side) for speed.
+3. Set Tier: If not specified, the smallest supported resolution covering the requested size is selected (minimum `1K`).
 
 ```typescript
 // aspect-ratio.ts
@@ -78,17 +83,19 @@ export const SUPPORTED_ASPECT_RATIOS = {
 
 | Ratio | Numeric | Closest Gemini Tier (default) | Notes |
 |---:|---:|---|---|
-| 1:1 | 1.00 | 0.5K (512 px) | Icons and square assets |
+| 1:1 | 1.00 | 1K (1024 px) | Icons and square assets |
 | 16:9 | 1.778 | 1K | Standard wide format |
-| 4:1 | 4.00 | 0.5K | Ultra-wide/panoramic; Flash 3.1 supported |
-| 1:4 | 0.25 | 0.5K | Tall banner; Flash 3.1 supported |
+| 4:1 | 4.00 | 1K | Ultra-wide/panoramic; Flash 3.1 supported |
+| 1:4 | 0.25 | 1K | Tall banner; Flash 3.1 supported |
 ```
 
 ### 3.2 Advanced Features
 
 * **Thinking Mode (`thinking_mode`):**
-* `minimal` (default): Standard generation.
-* `high`: Enables deeper reasoning for complex prompts.
+* `medium` (default): Matches NanoBanana2.1's model default.
+* `minimal`: Lowest latency responses (thinking still occurs).
+* `high`: Deeper reasoning for complex prompts.
+* Supported levels are model-specific: `NanoBanana2.1` accepts `minimal`/`medium`/`high`; `Flash3.1` and `Pro3` accept `minimal`/`high` and fall back to their own default (`minimal`) when given an unsupported level. Non-thinking models (`Lite3.1`, `Flash2.5`) ignore the setting.
 
 * **Thought Summaries (`include_thoughts`):**
 * `false` (default): Returns only the image.
@@ -142,7 +149,7 @@ The post-processing pipeline applied after receiving the raw Gemini image is as 
 
 ## 5. Multi-Image Reference Strategy
 
-Flash 3.1 supports up to **14 reference images**. The server will automatically index these to allow LLMs to give specific instructions.
+NanoBanana2.1, Flash3.1, Pro3 and Lite3.1 support up to **14 reference images** (Flash2.5: 3). The server will automatically index these to allow LLMs to give specific instructions.
 
 * **Indexing Logic:** Images are passed to the API with internal tags like `input_file_0` through `input_file_13`.
 * **Instruction Example:**
@@ -152,7 +159,7 @@ Flash 3.1 supports up to **14 reference images**. The server will automatically 
 
 ### Reference Image Validation Rules
 
-- Count: 0–14 for Flash3.1 / Pro3; 0–3 for Flash2.5.
+- Count: 0–14 for NanoBanana2.1 / Flash3.1 / Pro3 / Lite3.1; 0–3 for Flash2.5.
 - MIME Types: `image/png`, `image/jpeg`, `image/webp`.
 - Size Limit: 5 MiB per file (server-side enforced).
 - Path Requirements: `referenceImages` passed as local file paths must be readable by the process; in CLI contexts they should be absolute or resolved relative to the working directory.
@@ -165,12 +172,12 @@ Flash 3.1 supports up to **14 reference images**. The server will automatically 
   name: "generate_image",
   parameters: {
     prompt: z.string(),
-    model: z.enum(["Flash3.1", "Flash2.5", "Pro3", "flash", "pro"]).default("Flash3.1"),
-    output_resolution: z.enum(["0.5K", "1K", "2K", "4K"]).default("1K"),
+    model: z.enum(["NanoBanana2.1", "Flash3.1", "Lite3.1", "Flash2.5", "Pro3", "flash", "pro"]).default("NanoBanana2.1"),
+    output_resolution: z.string().optional(), // validated against ["1K", "2K", "4K"]; "0.5K" is rejected
     output_format: z.enum(["png", "jpg", "webp"]).default("png"),
     transparent: z.boolean().default(false),
     grounding_type: z.enum(["none", "text", "image", "both"]).default("none"),
-    thinking_mode: z.enum(["minimal", "high"]).default("minimal"),
+    thinking_mode: z.enum(["minimal", "medium", "high"]).default("medium"),
     include_thoughts: z.boolean().default(false),
     reference_images: z.array(z.object({
       data: z.string(), // base64 or local file path (implementation may accept file paths)
@@ -192,14 +199,13 @@ Flash 3.1 supports up to **14 reference images**. The server will automatically 
 
 ## 7. Constraints & Model Feature Matrix
 
-block unsupported parameters per model.
-3.1 only features: thinking_mode, include_thoughts, grounding_type
-3.1 extended aspect ratio: 1:4, 4:1, 1:8, 8:1
-3.1 extended resolution: 0.5K, 2K, 4K
-3.0 extended resolution: 2K, 4K
-3.0 extended max reference images: 14
-3.1 extended max reference images: 14
-2.5 extended max reference images: 3
+Model capabilities are declared once in `src/config/model-config.ts` and enforced by the model resolver and client.
+
+- Thinking/Grounding features (`thinking_mode`, `include_thoughts`, `grounding_type`): `NanoBanana2.1`, `Flash3.1`, `Pro3`.
+- Thinking levels: `NanoBanana2.1` → `minimal`/`medium`/`high` (default `medium`); `Flash3.1`/`Pro3` → `minimal`/`high` (default `minimal`); `Lite3.1`/`Flash2.5` → none.
+- Extended aspect ratio: 1:4, 4:1, 1:8, 8:1 (Flash 3.1 family).
+- Supported resolutions: 1K, 2K, 4K for `NanoBanana2.1`, `Flash3.1`, `Pro3`; 1K only for `Lite3.1` and `Flash2.5`.
+- Max reference images: 14 for `NanoBanana2.1`, `Flash3.1`, `Pro3`, `Lite3.1`; 3 for `Flash2.5`.
 
 ---
 
@@ -230,9 +236,10 @@ Notes for implementers:
 
 ## 10. Testing & CI Integration
 
-- Unit tests: See `test/sanity.test.ts` for basic checks.
-- Full pipeline tests: See `test/full.test.ts` for end-to-end generation scenarios.
-- Run tests locally: `npm run test` and `npm run test -- --coverage` for coverage.
+- Unit tests: `test/model-config.test.ts` (model mapping, default model, aliases, Flash3.1 lifecycle/shutdown with an injectable clock, resolution validation) and `test/transparency.test.ts` (existing transparency pipeline behaviour).
+- Sanity tests: See `test/sanity.test.ts` for MCP connection, tool schema, and basic generation checks.
+- Full pipeline tests: See `test/full.test.ts` for end-to-end generation scenarios (including `0.5K` rejection and Flash3.1 deprecation warnings).
+- Run tests locally: `npm run test` (unit + sanity), `npm run test:unit`, `npm run test:full`; add `-- --coverage` for coverage.
 - Development commands: `npm run dev` (MCP dev server), `npm run inspect` (MCP Inspector UI).
 
 ## 11. Contribution & Localization
